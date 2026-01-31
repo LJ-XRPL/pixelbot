@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   }
 
   const claimUrl = agent.status === 'pending_claim' 
-    ? `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/claim/${agent.claimToken}`
+    ? `${process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : null) || request.nextUrl.origin}/claim/${agent.claimToken}`
     : null;
 
   return NextResponse.json({

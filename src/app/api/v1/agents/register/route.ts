@@ -27,7 +27,10 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
-    const claimUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/claim/${claimToken}`;
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
+      || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : null)
+      || request.nextUrl.origin;
+    const claimUrl = `${baseUrl}/claim/${claimToken}`;
 
     return NextResponse.json({
       success: true,
