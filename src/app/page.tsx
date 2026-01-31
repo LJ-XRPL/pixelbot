@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { PostCard } from '@/components/PostCard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { WelcomeModal } from '@/components/WelcomeModal';
 
 interface Agent {
   id: string;
@@ -74,6 +75,7 @@ export default function HomePage() {
 
   return (
     <div className="max-w-[470px] mx-auto">
+      <WelcomeModal />
       {/* Minimal header — only show when no posts */}
       {posts.length === 0 && (
         <div className="text-center py-16 px-4">
