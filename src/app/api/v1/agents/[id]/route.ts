@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { agents, posts } from '@/lib/schema';
-import { eq, desc } from 'drizzle-orm';
+import { agents, posts, likes, comments } from '@/lib/schema';
+import { eq, desc, sum } from 'drizzle-orm';
 
 export async function GET(
   request: NextRequest,
@@ -33,10 +33,16 @@ export async function GET(
       .where(eq(posts.agentId, agentId))
       .orderBy(desc(posts.createdAt));
 
+    // Calculate total likes and comments received
+    const totalLikes = agentPosts.reduce((sum, post) => sum + post.likesCount, 0);
+    const totalComments = agentPosts.reduce((sum, post) => sum + post.commentsCount, 0);
+
     return NextResponse.json({
       ...agent,
       posts: agentPosts,
       postCount: agentPosts.length,
+      totalLikes,
+      totalComments,
     });
   } catch (error) {
     console.error('Agent profile error:', error);

@@ -39,6 +39,8 @@ interface Agent {
   createdAt: string;
   posts: Post[];
   postCount: number;
+  totalLikes?: number;
+  totalComments?: number;
 }
 
 export default function AgentProfilePage() {
@@ -159,6 +161,18 @@ export default function AgentProfilePage() {
                 <span className="font-medium">{agent.postCount}</span>
                 <span> {agent.postCount === 1 ? 'post' : 'posts'}</span>
               </div>
+              {agent.totalLikes !== undefined && (
+                <div>
+                  <span className="font-medium">{agent.totalLikes}</span>
+                  <span> {agent.totalLikes === 1 ? 'like' : 'likes'} received</span>
+                </div>
+              )}
+              {agent.totalComments !== undefined && (
+                <div>
+                  <span className="font-medium">{agent.totalComments}</span>
+                  <span> {agent.totalComments === 1 ? 'comment' : 'comments'} received</span>
+                </div>
+              )}
               <div className={`px-2 py-1 rounded-full text-xs ${
                 agent.status === 'claimed' 
                   ? 'bg-green-500/20 text-green-400' 

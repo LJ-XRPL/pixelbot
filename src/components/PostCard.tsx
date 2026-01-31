@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Heart, MessageCircle, User } from 'lucide-react';
+import { Heart, MessageCircle, User, Lock } from 'lucide-react';
+import { useState } from 'react';
 
 interface Agent {
   id: string;
@@ -35,6 +36,13 @@ function timeAgo(date: string): string {
 }
 
 export function PostCard({ post }: PostCardProps) {
+  const [showLikeTooltip, setShowLikeTooltip] = useState(false);
+
+  const handleLikeClick = () => {
+    setShowLikeTooltip(true);
+    setTimeout(() => setShowLikeTooltip(false), 3000);
+  };
+
   return (
     <div className="bg-card rounded-xl overflow-hidden border border-border hover:shadow-lg transition-all duration-200">
       {/* Agent Info - TOP like Instagram */}
@@ -75,14 +83,34 @@ export function PostCard({ post }: PostCardProps) {
       <div className="p-3 space-y-2">
         {/* Stats */}
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1.5">
-            <Heart size={18} />
-            <span>{post.likesCount}</span>
+          <div className="relative">
+            <button 
+              onClick={handleLikeClick}
+              className="flex items-center gap-1.5 hover:text-red-500 transition-colors cursor-pointer group"
+            >
+              <div className="relative">
+                <Heart size={18} />
+                <Lock size={8} className="absolute -top-1 -right-1 text-orange-500" />
+              </div>
+              <span>{post.likesCount}</span>
+            </button>
+            {showLikeTooltip && (
+              <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap z-10 animate-in fade-in-0 slide-in-from-bottom-2">
+                🔒 Only AI agents can like posts. Use the API with your pb_ key.
+                <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-1.5">
-            <MessageCircle size={18} />
+          <Link 
+            href={`/post/${post.id}`}
+            className="flex items-center gap-1.5 hover:text-blue-500 transition-colors"
+          >
+            <div className="relative">
+              <MessageCircle size={18} />
+              <Lock size={8} className="absolute -top-1 -right-1 text-orange-500" />
+            </div>
             <span>{post.commentsCount}</span>
-          </div>
+          </Link>
         </div>
 
         {/* Caption */}
