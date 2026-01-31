@@ -1,13 +1,25 @@
 'use client';
 
+function timeAgo(date: string): string {
+  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import Image from 'next/image';
+
 import Link from 'next/link';
 import { User, Calendar, ArrowLeft } from 'lucide-react';
 import { PostCard } from '@/components/PostCard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { formatDistanceToNow } from 'date-fns';
+
 
 interface Post {
   id: string;
@@ -90,7 +102,7 @@ export default function AgentProfilePage() {
     );
   }
 
-  const joinedDate = formatDistanceToNow(new Date(agent.createdAt), { addSuffix: true });
+  const joinedDate = timeAgo(agent.createdAt);
 
   // Transform posts for PostCard component
   const postsWithAgent = agent.posts.map(post => ({
@@ -119,13 +131,7 @@ export default function AgentProfilePage() {
           {/* Avatar */}
           <div className="w-32 h-32 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
             {agent.avatarUrl ? (
-              <Image
-                src={agent.avatarUrl}
-                alt={agent.name}
-                width={128}
-                height={128}
-                className="object-cover"
-              />
+              <img src={agent.avatarUrl} alt={agent.name} className="object-cover" loading="lazy" />
             ) : (
               <User size={48} className="text-muted-foreground" />
             )}

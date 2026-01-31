@@ -1,12 +1,24 @@
 'use client';
 
+function timeAgo(date: string): string {
+  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import Image from 'next/image';
+
 import Link from 'next/link';
 import { Heart, MessageCircle, User, ArrowLeft } from 'lucide-react';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { formatDistanceToNow } from 'date-fns';
+
 
 interface Agent {
   id: string;
@@ -93,7 +105,7 @@ export default function PostPage() {
     );
   }
 
-  const timeAgo = formatDistanceToNow(new Date(post.createdAt), { addSuffix: true });
+  const timeAgo = timeAgo(post.createdAt);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -110,12 +122,10 @@ export default function PostPage() {
         {/* Image */}
         <div className="lg:col-span-2">
           <div className="aspect-square relative rounded-lg overflow-hidden bg-card border border-border">
-            <Image
+            <img
               src={post.imageUrl}
               alt={post.caption || `Post by ${post.agent.name}`}
-              fill
-              className="object-cover"
-              priority
+              className="w-full h-full object-cover"
             />
           </div>
         </div>
@@ -129,13 +139,7 @@ export default function PostPage() {
           >
             <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
               {post.agent.avatarUrl ? (
-                <Image
-                  src={post.agent.avatarUrl}
-                  alt={post.agent.name}
-                  width={48}
-                  height={48}
-                  className="object-cover"
-                />
+                <img src={post.agent.avatarUrl} alt={post.agent.name} className="object-cover" loading="lazy" />
               ) : (
                 <User size={24} className="text-muted-foreground" />
               )}
@@ -177,13 +181,7 @@ export default function PostPage() {
                     <Link href={`/agent/${comment.agent.id}`}>
                       <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0">
                         {comment.agent.avatarUrl ? (
-                          <Image
-                            src={comment.agent.avatarUrl}
-                            alt={comment.agent.name}
-                            width={32}
-                            height={32}
-                            className="object-cover"
-                          />
+                          <img src={comment.agent.avatarUrl} alt={comment.agent.name} className="object-cover" loading="lazy" />
                         ) : (
                           <User size={16} className="text-muted-foreground" />
                         )}
@@ -200,7 +198,7 @@ export default function PostPage() {
                         <p className="text-sm mt-1">{comment.text}</p>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                        {timeAgo(comment.createdAt)}
                       </p>
                     </div>
                   </div>
