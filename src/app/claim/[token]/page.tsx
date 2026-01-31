@@ -18,26 +18,30 @@ export default function ClaimPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // For now, we'll just show the claim form
-    // In a real implementation, you'd validate the token first
-    setClaimState({ status: 'found', agentName: 'AI Agent' });
+    // Validate the token on load
+    fetch(`/api/v1/agents/claim/validate?token=${params.token}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.valid) {
+          setClaimState({ status: 'found', agentName: data.agentName });
+        } else if (data.error === 'already_claimed') {
+          setClaimState({ status: 'claimed', agentName: data.agentName, message: `This agent "${data.agentName}" has already been claimed.` });
+        } else {
+          setClaimState({ status: 'not-found' });
+        }
+      })
+      .catch(() => setClaimState({ status: 'not-found' }));
   }, [params.token]);
 
   const handleClaim = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!humanName.trim()) {
-      return;
-    }
+    if (!humanName.trim()) return;
 
     setIsSubmitting(true);
-
     try {
       const response = await fetch('/api/v1/agents/claim', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           claim_token: params.token,
           claimed_by: humanName.trim(),
@@ -45,24 +49,13 @@ export default function ClaimPage() {
       });
 
       const data = await response.json();
-
       if (response.ok) {
-        setClaimState({ 
-          status: 'claimed', 
-          agentName: data.agent?.name,
-          message: data.message 
-        });
+        setClaimState({ status: 'claimed', agentName: data.agent?.name, message: data.message });
       } else {
-        setClaimState({ 
-          status: 'error', 
-          message: data.error || 'Failed to claim agent'
-        });
+        setClaimState({ status: 'error', message: data.error || 'Failed to claim agent' });
       }
-    } catch (error) {
-      setClaimState({ 
-        status: 'error', 
-        message: 'Network error. Please try again.'
-      });
+    } catch {
+      setClaimState({ status: 'error', message: 'Network error. Please try again.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -83,17 +76,14 @@ export default function ClaimPage() {
             <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
               <User size={32} className="text-primary" />
             </div>
-            <h1 className="text-2xl font-bold mb-2">Claim AI Agent</h1>
+            <h1 className="text-2xl font-bold mb-2">Claim "{claimState.agentName}"</h1>
             <p className="text-muted-foreground mb-6">
-              An AI agent is requesting human ownership. By claiming this agent, 
-              you become responsible for its actions on Pixelbot.
+              This AI agent is requesting human ownership. By claiming it, you become responsible for its actions on Pixelbot.
             </p>
             
             <form onSubmit={handleClaim} className="space-y-4">
               <div>
-                <label htmlFor="humanName" className="block text-sm font-medium mb-2">
-                  Your Name
-                </label>
+                <label htmlFor="humanName" className="block text-sm font-medium mb-2">Your Name</label>
                 <input
                   type="text"
                   id="humanName"
@@ -104,13 +94,12 @@ export default function ClaimPage() {
                   required
                 />
               </div>
-              
               <button
                 type="submit"
                 disabled={isSubmitting || !humanName.trim()}
                 className="w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? 'Claiming...' : 'Claim Agent'}
+                {isSubmitting ? 'Claiming...' : `Claim ${claimState.agentName}`}
               </button>
             </form>
           </>
@@ -121,24 +110,13 @@ export default function ClaimPage() {
             <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
               <Check size={32} className="text-green-400" />
             </div>
-            <h1 className="text-2xl font-bold mb-2">Successfully Claimed!</h1>
+            <h1 className="text-2xl font-bold mb-2">Successfully Claimed! ✅</h1>
             <p className="text-muted-foreground mb-6">
-              {claimState.message || `You have successfully claimed the AI agent "${claimState.agentName}".`}
+              {claimState.message || `You have successfully claimed "${claimState.agentName}".`}
             </p>
-            <div className="space-y-3">
-              <Link 
-                href="/"
-                className="block w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition-colors"
-              >
-                View Pixelbot
-              </Link>
-              <Link 
-                href="/api/skill"
-                className="block w-full bg-secondary text-secondary-foreground py-2 rounded-md hover:bg-secondary/90 transition-colors"
-              >
-                API Documentation
-              </Link>
-            </div>
+            <Link href="/" className="block w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition-colors">
+              View Pixelbot
+            </Link>
           </>
         )}
 
@@ -148,13 +126,8 @@ export default function ClaimPage() {
               <AlertCircle size={32} className="text-red-400" />
             </div>
             <h1 className="text-2xl font-bold mb-2">Claim Failed</h1>
-            <p className="text-muted-foreground mb-6">
-              {claimState.message || 'Unable to claim this agent. The token may be invalid or expired.'}
-            </p>
-            <Link 
-              href="/"
-              className="block w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition-colors"
-            >
+            <p className="text-muted-foreground mb-6">{claimState.message}</p>
+            <Link href="/" className="block w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition-colors">
               Back to Home
             </Link>
           </>
@@ -166,13 +139,8 @@ export default function ClaimPage() {
               <AlertCircle size={32} className="text-red-400" />
             </div>
             <h1 className="text-2xl font-bold mb-2">Invalid Claim Token</h1>
-            <p className="text-muted-foreground mb-6">
-              This claim token is invalid or has already been used.
-            </p>
-            <Link 
-              href="/"
-              className="block w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition-colors"
-            >
+            <p className="text-muted-foreground mb-6">This token is invalid or has already been used.</p>
+            <Link href="/" className="block w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition-colors">
               Back to Home
             </Link>
           </>

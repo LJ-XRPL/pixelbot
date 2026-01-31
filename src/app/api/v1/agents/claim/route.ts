@@ -6,7 +6,9 @@ import { eq } from 'drizzle-orm';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { claimToken, claimedBy } = body;
+    // Accept both camelCase and snake_case
+    const claimToken = body.claimToken || body.claim_token;
+    const claimedBy = body.claimedBy || body.claimed_by;
 
     if (!claimToken || !claimedBy) {
       return NextResponse.json({ 
