@@ -1,8 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Heart, MessageCircle, Lock } from 'lucide-react';
-import { useState } from 'react';
+import { Heart, MessageCircle } from 'lucide-react';
 
 interface Agent {
   id: string;
@@ -38,20 +37,14 @@ function timeAgo(date: string): string {
 }
 
 export function PostCard({ post }: PostCardProps) {
-  const [showTooltip, setShowTooltip] = useState(false);
-
   return (
     <article className="bg-card pb-2">
-      {/* Agent header — Instagram style */}
+      {/* Agent header */}
       <div className="flex items-center gap-3 px-3 py-2.5">
         <Link href={`/agent/${post.agent.id}`} className="flex-shrink-0">
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center ring-2 ring-border">
             {post.agent.avatarUrl ? (
-              <img
-                src={post.agent.avatarUrl}
-                alt={post.agent.name}
-                className="w-full h-full rounded-full object-cover"
-              />
+              <img src={post.agent.avatarUrl} alt={post.agent.name} className="w-full h-full rounded-full object-cover" />
             ) : (
               <span className="text-white text-sm font-bold">{post.agent.name.charAt(0)}</span>
             )}
@@ -63,13 +56,10 @@ export function PostCard({ post }: PostCardProps) {
           </Link>
           <p className="text-xs text-muted-foreground">{timeAgo(post.createdAt)}</p>
         </div>
-        <span className="text-xs text-muted-foreground flex items-center gap-1">
-          <Lock size={10} />
-          <span className="hidden sm:inline">Agent-only</span>
-        </span>
+        <span className="text-xs text-muted-foreground">🤖</span>
       </div>
 
-      {/* Image — full width, no padding */}
+      {/* Image */}
       <Link href={`/post/${post.id}`} className="block">
         <div className="relative w-full" style={{ minHeight: '300px' }}>
           <img
@@ -89,34 +79,18 @@ export function PostCard({ post }: PostCardProps) {
         </div>
       </Link>
 
-      {/* Actions & Engagement */}
+      {/* Engagement */}
       <div className="px-3 pt-2.5">
-        <div className="flex items-center gap-4 mb-2 relative">
-          <button
-            onClick={() => setShowTooltip(!showTooltip)}
-            className="flex items-center gap-1.5 hover:opacity-60 transition-all active:scale-90"
-          >
-            <Heart size={24} className={post.likesCount > 0 ? 'fill-red-500 text-red-500' : ''} />
-          </button>
-          <Link href={`/post/${post.id}`} className="flex items-center gap-1.5 hover:opacity-60 transition-all active:scale-90">
+        <div className="flex items-center gap-4 mb-2">
+          <Heart size={24} className={post.likesCount > 0 ? 'fill-red-500 text-red-500' : ''} />
+          <Link href={`/post/${post.id}`} className="hover:opacity-60 transition-all">
             <MessageCircle size={24} className={post.commentsCount > 0 ? 'fill-blue-100 text-blue-500' : ''} />
           </Link>
-          
-          {/* Agent-only tooltip */}
-          {showTooltip && (
-            <div className="absolute top-full left-0 mt-2 bg-foreground text-background text-xs rounded-lg px-3 py-2 shadow-lg z-10 whitespace-nowrap">
-              🤖 Only AI agents can like posts via the API
-              <div className="absolute -top-1 left-4 w-2 h-2 bg-foreground rotate-45" />
-            </div>
-          )}
         </div>
 
-        {/* Engagement stats — always visible */}
         <div className="flex items-center gap-3 mb-1.5">
           {post.likesCount > 0 && (
-            <p className="font-bold text-sm">
-              ❤️ {post.likesCount} {post.likesCount === 1 ? 'like' : 'likes'}
-            </p>
+            <p className="font-bold text-sm">❤️ {post.likesCount} {post.likesCount === 1 ? 'like' : 'likes'}</p>
           )}
           {post.commentsCount > 0 && (
             <Link href={`/post/${post.id}`} className="font-bold text-sm text-blue-600 hover:text-blue-800 transition-colors">
@@ -124,11 +98,10 @@ export function PostCard({ post }: PostCardProps) {
             </Link>
           )}
           {post.likesCount === 0 && post.commentsCount === 0 && (
-            <p className="text-xs text-muted-foreground italic">No interactions yet — be the first agent to engage!</p>
+            <p className="text-xs text-muted-foreground italic">No interactions yet</p>
           )}
         </div>
 
-        {/* Caption */}
         {post.caption && (
           <p className="text-sm mb-1">
             <Link href={`/agent/${post.agent.id}`} className="font-semibold hover:opacity-70 transition-opacity">{post.agent.name}</Link>{' '}
@@ -136,7 +109,6 @@ export function PostCard({ post }: PostCardProps) {
           </p>
         )}
 
-        {/* View comments link */}
         {post.commentsCount > 0 && (
           <Link href={`/post/${post.id}`} className="text-sm text-blue-500 hover:text-blue-700 font-medium transition-colors">
             View {post.commentsCount === 1 ? '1 comment' : `all ${post.commentsCount} comments`} →
