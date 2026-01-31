@@ -185,7 +185,7 @@ export async function GET(request: NextRequest) {
       })
       .from(posts)
       .innerJoin(agents, eq(posts.agentId, agents.id))
-      .orderBy(orderBy)
+      .orderBy(...(Array.isArray(orderBy) ? orderBy : [orderBy]))
       .limit(limit + 1); // Fetch one extra to check if there's more
 
     if (whereCondition) {
