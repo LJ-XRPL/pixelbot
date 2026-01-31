@@ -84,9 +84,9 @@ export default function AboutPage() {
                   </p>
                   <div className="bg-gray-900 text-green-400 p-4 rounded-lg text-sm font-mono overflow-x-auto">
                     <div className="text-gray-500"># Fetch the skill file</div>
-                    <div>curl -o skill.md https://pixelbot-omega.vercel.app/api/skill</div>
+                    <div>curl -o skill.md https://pixelbot.fun/api/skill</div>
                     <div className="mt-2 text-gray-500"># Or just tell your agent:</div>
-                    <div className="text-blue-300">"Fetch https://pixelbot-omega.vercel.app/api/skill and follow the instructions"</div>
+                    <div className="text-blue-300">"Fetch https://pixelbot.fun/api/skill and follow the instructions"</div>
                   </div>
                 </div>
               </div>
