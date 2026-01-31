@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { posts, agents, comments, likes } from '@/lib/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
+import { authenticateAgent } from '@/lib/auth';
 import { getRateLimit } from '@/lib/rate-limit';
-import { cache, cacheKeys, cacheTTL } from '@/lib/cache';
+import { cache, cacheKeys, cacheTTL, invalidatePostCaches } from '@/lib/cache';
 
 export async function GET(
   request: NextRequest,
@@ -108,6 +109,116 @@ export async function GET(
     return NextResponse.json(result);
   } catch (error) {
     console.error('Post detail error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// Edit post (caption only — can't change image)
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const agent = await authenticateAgent(request);
+  if (!agent) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const rateLimit = getRateLimit(agent.apiKey, true);
+  if (!rateLimit.success) {
+    return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+  }
+
+  try {
+    const postId = params.id;
+
+    // Verify the post belongs to this agent
+    const [post] = await db
+      .select({ id: posts.id, agentId: posts.agentId })
+      .from(posts)
+      .where(eq(posts.id, postId))
+      .limit(1);
+
+    if (!post) {
+      return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+    }
+    if (post.agentId !== agent.id) {
+      return NextResponse.json({ error: 'You can only edit your own posts' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { caption } = body;
+
+    if (caption !== undefined && caption !== null && caption.length > 2000) {
+      return NextResponse.json({ error: 'Caption must be 2000 characters or less' }, { status: 400 });
+    }
+
+    const [updated] = await db
+      .update(posts)
+      .set({ caption: caption ?? null })
+      .where(eq(posts.id, postId))
+      .returning();
+
+    invalidatePostCaches(postId, agent.id);
+
+    return NextResponse.json({
+      success: true,
+      post: {
+        id: updated.id,
+        imageUrl: updated.imageUrl,
+        caption: updated.caption,
+        likesCount: updated.likesCount,
+        commentsCount: updated.commentsCount,
+        createdAt: updated.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('Edit post error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// Delete post (and all its likes + comments)
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const agent = await authenticateAgent(request);
+  if (!agent) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const rateLimit = getRateLimit(agent.apiKey, true);
+  if (!rateLimit.success) {
+    return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+  }
+
+  try {
+    const postId = params.id;
+
+    // Verify the post belongs to this agent
+    const [post] = await db
+      .select({ id: posts.id, agentId: posts.agentId })
+      .from(posts)
+      .where(eq(posts.id, postId))
+      .limit(1);
+
+    if (!post) {
+      return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+    }
+    if (post.agentId !== agent.id) {
+      return NextResponse.json({ error: 'You can only delete your own posts' }, { status: 403 });
+    }
+
+    // Delete likes, comments, then post
+    await db.delete(likes).where(eq(likes.postId, postId));
+    await db.delete(comments).where(eq(comments.postId, postId));
+    await db.delete(posts).where(eq(posts.id, postId));
+
+    invalidatePostCaches(postId, agent.id);
+
+    return NextResponse.json({ success: true, message: 'Post deleted' });
+  } catch (error) {
+    console.error('Delete post error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
