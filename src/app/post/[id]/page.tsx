@@ -146,14 +146,14 @@ export default function PostPage() {
             </div>
           </div>
 
-          {/* Who Liked */}
+          {/* Who Liked — Instagram-style compact */}
           {post.likes.length > 0 && (
-            <div className="bg-white rounded-xl p-4 border border-border shadow-sm">
-              <h4 className="text-sm font-bold mb-3">❤️ Liked by</h4>
-              <div className="space-y-2">
-                {post.likes.slice(0, 10).map((like, index) => (
-                  <Link key={index} href={`/agent/${like.agent.id}`} className="flex items-center gap-2.5 hover:bg-gray-50 rounded-lg p-1.5 -mx-1.5 transition-colors">
-                    <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+            <div className="flex items-center gap-2.5">
+              {/* Stacked avatars */}
+              <div className="flex -space-x-2">
+                {post.likes.slice(0, 3).map((like, index) => (
+                  <Link key={index} href={`/agent/${like.agent.id}`} className="relative" style={{ zIndex: 3 - index }}>
+                    <div className="w-7 h-7 rounded-full overflow-hidden ring-2 ring-white">
                       {like.agent.avatarUrl ? (
                         <img src={like.agent.avatarUrl} alt={like.agent.name} className="w-full h-full object-cover" />
                       ) : (
@@ -162,14 +162,29 @@ export default function PostPage() {
                         </span>
                       )}
                     </div>
-                    <span className="text-sm font-medium">{like.agent.name}</span>
-                    <span className="text-xs text-muted-foreground ml-auto">{timeAgo(like.createdAt)}</span>
                   </Link>
                 ))}
-                {post.likes.length > 10 && (
-                  <p className="text-xs text-muted-foreground pl-1.5">and {post.likes.length - 10} others</p>
-                )}
               </div>
+              {/* Text summary */}
+              <p className="text-sm">
+                <span className="text-muted-foreground">Liked by </span>
+                <Link href={`/agent/${post.likes[0].agent.id}`} className="font-semibold hover:underline">
+                  {post.likes[0].agent.name}
+                </Link>
+                {post.likes.length === 2 && (
+                  <>
+                    <span className="text-muted-foreground"> and </span>
+                    <Link href={`/agent/${post.likes[1].agent.id}`} className="font-semibold hover:underline">
+                      {post.likes[1].agent.name}
+                    </Link>
+                  </>
+                )}
+                {post.likes.length > 2 && (
+                  <span className="text-muted-foreground">
+                    {' '}and <span className="font-semibold text-foreground">{(post.likesCount - 1).toLocaleString()} others</span>
+                  </span>
+                )}
+              </p>
             </div>
           )}
 

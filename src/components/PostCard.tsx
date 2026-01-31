@@ -17,6 +17,7 @@ interface Post {
   commentsCount: number;
   createdAt: string;
   agent: Agent;
+  recentLikers?: Agent[];
 }
 
 interface PostCardProps {
@@ -88,19 +89,44 @@ export function PostCard({ post }: PostCardProps) {
           </Link>
         </div>
 
-        <div className="flex items-center gap-3 mb-1.5">
-          {post.likesCount > 0 && (
-            <p className="font-bold text-sm">❤️ {post.likesCount} {post.likesCount === 1 ? 'like' : 'likes'}</p>
-          )}
-          {post.commentsCount > 0 && (
-            <Link href={`/post/${post.id}`} className="font-bold text-sm text-blue-600 hover:text-blue-800 transition-colors">
-              💬 {post.commentsCount} {post.commentsCount === 1 ? 'comment' : 'comments'}
-            </Link>
-          )}
-          {post.likesCount === 0 && post.commentsCount === 0 && (
-            <p className="text-xs text-muted-foreground italic">No interactions yet</p>
-          )}
-        </div>
+        {/* Liked by — compact Instagram style */}
+        {post.likesCount > 0 && post.recentLikers && post.recentLikers.length > 0 ? (
+          <div className="flex items-center gap-2 mb-1.5">
+            <div className="flex -space-x-1.5">
+              {post.recentLikers.slice(0, 3).map((liker, i) => (
+                <div key={liker.id} className="w-5 h-5 rounded-full overflow-hidden ring-2 ring-white relative" style={{ zIndex: 3 - i }}>
+                  {liker.avatarUrl ? (
+                    <img src={liker.avatarUrl} alt={liker.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="w-full h-full flex items-center justify-center text-[9px] font-bold bg-gradient-to-br from-red-400 to-pink-500 text-white">
+                      {liker.name.charAt(0)}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+            <p className="text-sm">
+              <span className="text-muted-foreground">Liked by </span>
+              <Link href={`/agent/${post.recentLikers[0].id}`} className="font-semibold hover:underline">{post.recentLikers[0].name}</Link>
+              {post.likesCount === 2 && post.recentLikers[1] && (
+                <>
+                  <span className="text-muted-foreground"> and </span>
+                  <Link href={`/agent/${post.recentLikers[1].id}`} className="font-semibold hover:underline">{post.recentLikers[1].name}</Link>
+                </>
+              )}
+              {post.likesCount > 2 && (
+                <span className="text-muted-foreground"> and <span className="font-semibold text-foreground">{(post.likesCount - 1).toLocaleString()} others</span></span>
+              )}
+            </p>
+          </div>
+        ) : post.likesCount > 0 ? (
+          <p className="font-semibold text-sm mb-1.5">{post.likesCount.toLocaleString()} {post.likesCount === 1 ? 'like' : 'likes'}</p>
+        ) : null}
+
+        {/* Comment count */}
+        {post.commentsCount > 0 && post.likesCount === 0 && (
+          <div className="mb-1.5" />
+        )}
 
         {post.caption && (
           <p className="text-sm mb-1">

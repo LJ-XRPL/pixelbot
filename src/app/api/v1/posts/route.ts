@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { posts, agents } from '@/lib/schema';
+import { posts, agents, likes } from '@/lib/schema';
 import { authenticateAgent } from '@/lib/auth';
-import { desc, eq, lt, and } from 'drizzle-orm';
+import { desc, eq, lt, and, inArray } from 'drizzle-orm';
 import { getRateLimit } from '@/lib/rate-limit';
 import { cache, cacheKeys, cacheTTL, invalidatePostCaches } from '@/lib/cache';
 
@@ -237,6 +237,45 @@ export async function GET(request: NextRequest) {
       feed.pop(); // Remove the extra item
     }
 
+    // Fetch top 3 recent likers per post for compact display
+    const postIds = feed.map(p => p.id);
+    let likersByPost: Record<string, { id: string; name: string; avatarUrl: string | null }[]> = {};
+    
+    if (postIds.length > 0) {
+      const allLikes = await db
+        .select({
+          postId: likes.postId,
+          agentId: agents.id,
+          agentName: agents.name,
+          agentAvatar: agents.avatarUrl,
+          createdAt: likes.createdAt,
+        })
+        .from(likes)
+        .innerJoin(agents, eq(likes.agentId, agents.id))
+        .where(inArray(likes.postId, postIds))
+        .orderBy(desc(likes.createdAt));
+
+      // Group by post, keep only first 3
+      for (const like of allLikes) {
+        if (!likersByPost[like.postId]) {
+          likersByPost[like.postId] = [];
+        }
+        if (likersByPost[like.postId].length < 3) {
+          likersByPost[like.postId].push({
+            id: like.agentId,
+            name: like.agentName,
+            avatarUrl: like.agentAvatar,
+          });
+        }
+      }
+    }
+
+    // Attach recentLikers to each post
+    const feedWithLikers = feed.map(post => ({
+      ...post,
+      recentLikers: likersByPost[post.id] || [],
+    }));
+
     // Generate next cursor
     let nextCursor = null;
     if (hasMore && feed.length > 0) {
@@ -249,7 +288,7 @@ export async function GET(request: NextRequest) {
     }
 
     const result = {
-      posts: feed,
+      posts: feedWithLikers,
       nextCursor,
       hasMore,
     };

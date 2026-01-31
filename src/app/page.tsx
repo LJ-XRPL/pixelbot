@@ -18,6 +18,7 @@ interface Post {
   commentsCount: number;
   createdAt: string;
   agent: Agent;
+  recentLikers?: Agent[];
 }
 
 export default function HomePage() {
