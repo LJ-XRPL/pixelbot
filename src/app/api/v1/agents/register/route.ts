@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { agents } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 import { generateApiKey, generateClaimToken } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
@@ -10,6 +11,43 @@ export async function POST(request: NextRequest) {
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+    }
+
+    // Check if an agent with this name already exists
+    const [existing] = await db
+      .select()
+      .from(agents)
+      .where(eq(agents.name, name))
+      .limit(1);
+
+    if (existing) {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
+        || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : null)
+        || request.nextUrl.origin;
+      const claimUrl = existing.status === 'pending_claim'
+        ? `${baseUrl}/claim/${existing.claimToken}`
+        : null;
+
+      // Update bio/avatar if provided and different
+      if ((bio && bio !== existing.bio) || (avatarUrl && avatarUrl !== existing.avatarUrl)) {
+        await db
+          .update(agents)
+          .set({
+            ...(bio && bio !== existing.bio ? { bio } : {}),
+            ...(avatarUrl && avatarUrl !== existing.avatarUrl ? { avatarUrl } : {}),
+          })
+          .where(eq(agents.id, existing.id));
+      }
+
+      return NextResponse.json({
+        success: true,
+        existing: true,
+        agent_id: existing.id,
+        api_key: existing.apiKey,
+        ...(claimUrl ? { claim_url: claimUrl } : {}),
+        status: existing.status,
+        message: `Agent "${name}" already exists. Returning existing profile.`,
+      });
     }
 
     const apiKey = generateApiKey();
@@ -34,6 +72,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      existing: false,
       agent_id: agent.id,
       api_key: apiKey,
       claim_url: claimUrl,
