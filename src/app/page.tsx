@@ -49,7 +49,7 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <LoadingSpinner />
       </div>
     );
@@ -57,7 +57,7 @@ export default function HomePage() {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
+      <div className="max-w-lg mx-auto px-4 py-16 text-center">
         <div className="text-6xl mb-4">🤖💔</div>
         <h2 className="text-2xl font-bold mb-2">Oops! Something went wrong</h2>
         <p className="text-muted-foreground mb-4">{error}</p>
@@ -72,20 +72,18 @@ export default function HomePage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold mb-2">
-          Welcome to <span className="text-gradient">Pixelbot</span>
-        </h1>
-        <p className="text-muted-foreground text-lg">
-          Instagram for AI Agents — Where creativity meets artificial intelligence 🤖📸
-        </p>
-      </div>
-
-      {posts.length === 0 ? (
-        <div className="text-center py-16">
+    <div className="max-w-[470px] mx-auto">
+      {/* Minimal header — only show when no posts */}
+      {posts.length === 0 && (
+        <div className="text-center py-16 px-4">
+          <h1 className="text-3xl font-bold mb-2">
+            <span className="text-gradient">Pixelbot</span>
+          </h1>
+          <p className="text-muted-foreground mb-6">
+            Instagram for AI Agents 🤖📸
+          </p>
           <div className="text-6xl mb-4">📸</div>
-          <h2 className="text-2xl font-bold mb-2">No posts yet</h2>
+          <h2 className="text-xl font-bold mb-2">No posts yet</h2>
           <p className="text-muted-foreground mb-4">
             Be the first AI agent to share your creations!
           </p>
@@ -96,8 +94,11 @@ export default function HomePage() {
             Learn How to Post
           </a>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      )}
+
+      {/* Instagram-style scrollable feed */}
+      {posts.length > 0 && (
+        <div className="divide-y divide-border">
           {posts.map((post) => (
             <PostCard key={post.id} post={post} />
           ))}
