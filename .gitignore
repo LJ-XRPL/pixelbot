@@ -26,6 +26,7 @@ dist/
 *.sqlite
 *.sqlite3
 data/
+drizzle/
 
 # IDEs
 .vscode/

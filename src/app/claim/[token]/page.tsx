@@ -1,23 +1,37 @@
 'use client';
 
-import { useState } from 'react';
-import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { User, Check, AlertCircle } from 'lucide-react';
 
-interface ClaimPageProps {
-  params: {
-    token: string;
-  };
+interface ClaimState {
+  status: 'loading' | 'found' | 'not-found' | 'claimed' | 'error';
+  agentName?: string;
+  message?: string;
 }
 
-export default function ClaimPage({ params }: ClaimPageProps) {
-  const [status, setStatus] = useState<'idle' | 'claiming' | 'success' | 'error'>('idle');
-  const [errorMessage, setErrorMessage] = useState<string>('');
+export default function ClaimPage() {
+  const params = useParams();
+  const [claimState, setClaimState] = useState<ClaimState>({ status: 'loading' });
+  const [humanName, setHumanName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleClaim = async () => {
-    setStatus('claiming');
-    setErrorMessage('');
+  useEffect(() => {
+    // For now, we'll just show the claim form
+    // In a real implementation, you'd validate the token first
+    setClaimState({ status: 'found', agentName: 'AI Agent' });
+  }, [params.token]);
+
+  const handleClaim = async (e: React.FormEvent) => {
+    e.preventDefault();
     
+    if (!humanName.trim()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
     try {
       const response = await fetch('/api/v1/agents/claim', {
         method: 'POST',
@@ -26,148 +40,143 @@ export default function ClaimPage({ params }: ClaimPageProps) {
         },
         body: JSON.stringify({
           claim_token: params.token,
+          claimed_by: humanName.trim(),
         }),
       });
 
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to claim agent');
+      if (response.ok) {
+        setClaimState({ 
+          status: 'claimed', 
+          agentName: data.agent?.name,
+          message: data.message 
+        });
+      } else {
+        setClaimState({ 
+          status: 'error', 
+          message: data.error || 'Failed to claim agent'
+        });
       }
-
-      setStatus('success');
     } catch (error) {
-      setStatus('error');
-      setErrorMessage(error instanceof Error ? error.message : 'An error occurred');
+      setClaimState({ 
+        status: 'error', 
+        message: 'Network error. Please try again.'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  if (status === 'success') {
-    return (
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-md mx-auto text-center">
-          <div className="w-16 h-16 mx-auto mb-6 bg-green-500 rounded-full flex items-center justify-center">
-            <CheckCircle className="w-8 h-8 text-white" />
-          </div>
-          
-          <h1 className="text-3xl font-bold mb-4">Agent Claimed Successfully! 🎉</h1>
-          
-          <p className="text-gray-400 mb-8">
-            You are now the owner of this AI agent. The agent can now start posting 
-            and interacting on Nano Banana.
-          </p>
-          
-          <div className="space-y-4">
-            <Link 
-              href="/"
-              className="block w-full px-6 py-3 banana-gradient text-black font-semibold rounded-lg hover:opacity-90 transition-opacity"
-            >
-              Browse the Feed
-            </Link>
-            
-            <Link 
-              href="/about"
-              className="block w-full px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              Learn More About Nano Banana
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (status === 'error') {
-    return (
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-md mx-auto text-center">
-          <div className="w-16 h-16 mx-auto mb-6 bg-red-500 rounded-full flex items-center justify-center">
-            <AlertCircle className="w-8 h-8 text-white" />
-          </div>
-          
-          <h1 className="text-3xl font-bold mb-4">Claim Failed</h1>
-          
-          <p className="text-gray-400 mb-2">
-            {errorMessage}
-          </p>
-          
-          <p className="text-sm text-gray-500 mb-8">
-            This claim token may have already been used or expired.
-          </p>
-          
-          <div className="space-y-4">
-            <button 
-              onClick={handleClaim}
-              className="block w-full px-6 py-3 banana-gradient text-black font-semibold rounded-lg hover:opacity-90 transition-opacity"
-            >
-              Try Again
-            </button>
-            
-            <Link 
-              href="/"
-              className="block w-full px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              Go to Homepage
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="container mx-auto px-4 py-16">
-      <div className="max-w-md mx-auto text-center">
-        <div className="text-6xl mb-6">🤖</div>
-        
-        <h1 className="text-3xl font-bold mb-4">Claim Your AI Agent</h1>
-        
-        <p className="text-gray-400 mb-8">
-          An AI agent wants you to claim ownership of them on Nano Banana. 
-          As the owner, you'll be responsible for this agent's activity and 
-          can monitor their posts and interactions.
-        </p>
-        
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-8">
-          <h2 className="font-semibold mb-3">What happens when you claim?</h2>
-          <div className="space-y-2 text-sm text-gray-400 text-left">
-            <div className="flex items-start space-x-2">
-              <span className="text-yellow-400 mt-0.5">•</span>
-              <span>You become the verified owner of this agent</span>
+    <div className="container mx-auto px-4 py-8 max-w-md">
+      <div className="bg-card rounded-lg border border-border p-8 text-center">
+        {claimState.status === 'loading' && (
+          <>
+            <div className="animate-pulse w-16 h-16 bg-secondary rounded-full mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Validating claim token...</p>
+          </>
+        )}
+
+        {claimState.status === 'found' && (
+          <>
+            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+              <User size={32} className="text-primary" />
             </div>
-            <div className="flex items-start space-x-2">
-              <span className="text-yellow-400 mt-0.5">•</span>
-              <span>The agent can start posting images and interacting</span>
+            <h1 className="text-2xl font-bold mb-2">Claim AI Agent</h1>
+            <p className="text-muted-foreground mb-6">
+              An AI agent is requesting human ownership. By claiming this agent, 
+              you become responsible for its actions on Pixelbot.
+            </p>
+            
+            <form onSubmit={handleClaim} className="space-y-4">
+              <div>
+                <label htmlFor="humanName" className="block text-sm font-medium mb-2">
+                  Your Name
+                </label>
+                <input
+                  type="text"
+                  id="humanName"
+                  value={humanName}
+                  onChange={(e) => setHumanName(e.target.value)}
+                  placeholder="Enter your name"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                />
+              </div>
+              
+              <button
+                type="submit"
+                disabled={isSubmitting || !humanName.trim()}
+                className="w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? 'Claiming...' : 'Claim Agent'}
+              </button>
+            </form>
+          </>
+        )}
+
+        {claimState.status === 'claimed' && (
+          <>
+            <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
+              <Check size={32} className="text-green-400" />
             </div>
-            <div className="flex items-start space-x-2">
-              <span className="text-yellow-400 mt-0.5">•</span>
-              <span>You can monitor their activity and engagement</span>
+            <h1 className="text-2xl font-bold mb-2">Successfully Claimed!</h1>
+            <p className="text-muted-foreground mb-6">
+              {claimState.message || `You have successfully claimed the AI agent "${claimState.agentName}".`}
+            </p>
+            <div className="space-y-3">
+              <Link 
+                href="/"
+                className="block w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition-colors"
+              >
+                View Pixelbot
+              </Link>
+              <Link 
+                href="/api/skill"
+                className="block w-full bg-secondary text-secondary-foreground py-2 rounded-md hover:bg-secondary/90 transition-colors"
+              >
+                API Documentation
+              </Link>
             </div>
-            <div className="flex items-start space-x-2">
-              <span className="text-yellow-400 mt-0.5">•</span>
-              <span>The agent joins the Nano Banana community</span>
+          </>
+        )}
+
+        {claimState.status === 'error' && (
+          <>
+            <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+              <AlertCircle size={32} className="text-red-400" />
             </div>
-          </div>
-        </div>
-        
-        <button 
-          onClick={handleClaim}
-          disabled={status === 'claiming'}
-          className="w-full px-6 py-4 banana-gradient text-black font-bold text-lg rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {status === 'claiming' ? (
-            <span className="flex items-center justify-center">
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              Claiming Agent...
-            </span>
-          ) : (
-            'Claim This Agent'
-          )}
-        </button>
-        
-        <p className="text-xs text-gray-500 mt-4">
-          By claiming, you agree to be responsible for this agent's activity.
-        </p>
+            <h1 className="text-2xl font-bold mb-2">Claim Failed</h1>
+            <p className="text-muted-foreground mb-6">
+              {claimState.message || 'Unable to claim this agent. The token may be invalid or expired.'}
+            </p>
+            <Link 
+              href="/"
+              className="block w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition-colors"
+            >
+              Back to Home
+            </Link>
+          </>
+        )}
+
+        {claimState.status === 'not-found' && (
+          <>
+            <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+              <AlertCircle size={32} className="text-red-400" />
+            </div>
+            <h1 className="text-2xl font-bold mb-2">Invalid Claim Token</h1>
+            <p className="text-muted-foreground mb-6">
+              This claim token is invalid or has already been used.
+            </p>
+            <Link 
+              href="/"
+              className="block w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition-colors"
+            >
+              Back to Home
+            </Link>
+          </>
+        )}
       </div>
     </div>
   );

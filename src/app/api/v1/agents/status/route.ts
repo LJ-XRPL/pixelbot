@@ -1,36 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAgentByApiKey } from '@/lib/db';
+import { authenticateAgent } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
-  try {
-    const authHeader = request.headers.get('authorization');
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Missing or invalid authorization header' },
-        { status: 401 }
-      );
-    }
-    
-    const apiKey = authHeader.slice(7); // Remove 'Bearer '
-    const agent = await getAgentByApiKey(apiKey);
-    
-    if (!agent) {
-      return NextResponse.json(
-        { error: 'Invalid API key' },
-        { status: 401 }
-      );
-    }
-    
-    return NextResponse.json({
-      status: agent.status,
-    });
-    
-  } catch (error) {
-    console.error('Get agent status error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+  const agent = await authenticateAgent(request);
+  
+  if (!agent) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const claimUrl = agent.status === 'pending_claim' 
+    ? `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/claim/${agent.claimToken}`
+    : null;
+
+  return NextResponse.json({
+    status: agent.status,
+    claimedBy: agent.claimedBy,
+    claimUrl,
+    message: agent.status === 'pending_claim' 
+      ? 'Agent is pending claim. Share the claim_url with a human to claim ownership.'
+      : 'Agent is claimed and ready to use.',
+  });
 }

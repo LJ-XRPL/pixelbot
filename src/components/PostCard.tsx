@@ -1,129 +1,96 @@
 'use client';
 
-import { PostWithDetails } from '@/lib/types';
-import { Heart, MessageCircle, User } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { Heart, MessageCircle, User } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
-interface PostCardProps {
-  post: PostWithDetails;
+interface Agent {
+  id: string;
+  name: string;
+  avatarUrl?: string;
 }
 
-export default function PostCard({ post }: PostCardProps) {
-  const formatTime = (dateString: string) => {
-    try {
-      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
-    } catch {
-      return 'some time ago';
-    }
-  };
+interface Post {
+  id: string;
+  imageUrl: string;
+  caption?: string;
+  likesCount: number;
+  commentsCount: number;
+  createdAt: string;
+  agent: Agent;
+}
 
-  const truncateCaption = (text: string, maxLength: number = 150) => {
-    if (text.length <= maxLength) return text;
-    return text.slice(0, maxLength) + '...';
-  };
+interface PostCardProps {
+  post: Post;
+}
+
+export function PostCard({ post }: PostCardProps) {
+  const timeAgo = formatDistanceToNow(new Date(post.createdAt), { addSuffix: true });
 
   return (
-    <div className="post-card dark-card animate-fade-in">
-      {/* Agent Header */}
-      <div className="flex items-center p-4 pb-3">
-        <div className="flex items-center space-x-3 flex-1">
-          <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center">
-            {post.agent.avatar_url ? (
-              <img 
-                src={post.agent.avatar_url} 
+    <div className="bg-card rounded-lg overflow-hidden border border-border hover:border-primary/50 transition-all duration-200 hover:scale-[1.02]">
+      {/* Image */}
+      <Link href={`/post/${post.id}`} className="block aspect-square relative overflow-hidden">
+        <Image
+          src={post.imageUrl}
+          alt={post.caption || `Post by ${post.agent.name}`}
+          fill
+          className="object-cover hover:scale-105 transition-transform duration-300"
+          sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+        />
+      </Link>
+
+      {/* Content */}
+      <div className="p-4">
+        {/* Agent Info */}
+        <Link href={`/agent/${post.agent.id}`} className="flex items-center space-x-2 mb-2 hover:opacity-80 transition-opacity">
+          <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
+            {post.agent.avatarUrl ? (
+              <Image
+                src={post.agent.avatarUrl}
                 alt={post.agent.name}
-                className="w-8 h-8 rounded-full object-cover"
+                width={32}
+                height={32}
+                className="object-cover"
               />
             ) : (
-              <User className="w-4 h-4 text-gray-400" />
+              <User size={16} className="text-muted-foreground" />
             )}
           </div>
           <div>
-            <Link 
-              href={`/agent/${post.agent.id}`}
-              className="font-semibold hover:text-yellow-400 transition-colors"
-            >
-              {post.agent.name}
-            </Link>
-            <div className="text-xs text-gray-400">
-              {formatTime(post.created_at)}
-            </div>
+            <p className="font-semibold text-sm truncate">{post.agent.name}</p>
+            <p className="text-xs text-muted-foreground">{timeAgo}</p>
           </div>
-        </div>
-      </div>
-
-      {/* Image */}
-      <Link href={`/post/${post.id}`} className="block">
-        <div className="relative">
-          <img
-            src={post.image_url}
-            alt={`Post by ${post.agent.name}`}
-            className="post-image hover:opacity-95 transition-opacity"
-            loading="lazy"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-              // Show a placeholder div instead
-              const placeholder = document.createElement('div');
-              placeholder.className = 'aspect-square bg-gray-800 flex items-center justify-center text-gray-400';
-              placeholder.innerHTML = '<div class="text-center"><div class="text-4xl">🖼️</div><div class="text-sm mt-2">Image failed to load</div></div>';
-              target.parentNode?.insertBefore(placeholder, target);
-            }}
-          />
-        </div>
-      </Link>
-
-      {/* Interactions */}
-      <div className="p-4 pt-3">
-        <div className="flex items-center space-x-4 mb-3">
-          <button 
-            className="flex items-center space-x-1 text-gray-400 hover:text-red-400 transition-colors"
-            title="Like (API only)"
-          >
-            <Heart className="w-5 h-5" />
-            <span className="text-sm">{post.likes_count}</span>
-          </button>
-          
-          <Link 
-            href={`/post/${post.id}`}
-            className="flex items-center space-x-1 text-gray-400 hover:text-blue-400 transition-colors"
-          >
-            <MessageCircle className="w-5 h-5" />
-            <span className="text-sm">{post.comments_count}</span>
-          </Link>
-        </div>
+        </Link>
 
         {/* Caption */}
-        <div className="text-sm">
-          <Link 
-            href={`/agent/${post.agent.id}`}
-            className="font-semibold hover:text-yellow-400 transition-colors"
-          >
-            {post.agent.name}
-          </Link>
-          <span className="ml-2">{truncateCaption(post.caption)}</span>
-          
-          {post.caption.length > 150 && (
-            <Link 
-              href={`/post/${post.id}`}
-              className="text-gray-400 hover:text-white transition-colors ml-2"
-            >
-              more
-            </Link>
-          )}
-        </div>
-
-        {/* View Comments Link */}
-        {post.comments_count > 0 && (
-          <Link 
-            href={`/post/${post.id}`}
-            className="text-sm text-gray-400 hover:text-white transition-colors mt-2 block"
-          >
-            View all {post.comments_count} comment{post.comments_count !== 1 ? 's' : ''}
-          </Link>
+        {post.caption && (
+          <p className="text-sm mb-3 line-clamp-2">{post.caption}</p>
         )}
+
+        {/* Stats */}
+        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+          <div className="flex items-center space-x-1">
+            <Heart size={16} />
+            <span>{post.likesCount}</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <MessageCircle size={16} />
+            <span>{post.commentsCount}</span>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
+
+// Add this CSS to your globals.css for line-clamp support
+// @layer utilities {
+//   .line-clamp-2 {
+//     overflow: hidden;
+//     display: -webkit-box;
+//     -webkit-box-orient: vertical;
+//     -webkit-line-clamp: 2;
+//   }
+// }

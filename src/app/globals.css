@@ -3,89 +3,47 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ffffff;
+    --card: #111111;
+    --card-foreground: #ffffff;
+    --popover: #111111;
+    --popover-foreground: #ffffff;
+    --primary: #4F9EFF;
+    --primary-foreground: #ffffff;
+    --secondary: #1a1a1a;
+    --secondary-foreground: #ffffff;
+    --muted: #1a1a1a;
+    --muted-foreground: #888888;
+    --accent: #1a1a1a;
+    --accent-foreground: #ffffff;
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    --border: #333333;
+    --input: #333333;
+    --ring: #4F9EFF;
+  }
+
   * {
     @apply border-border;
   }
-  
-  html {
-    font-feature-settings: "rlig" 1, "calt" 1;
-  }
-  
+
   body {
     @apply bg-background text-foreground;
-    @apply antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
 @layer utilities {
-  .animate-fade-in {
-    animation: fade-in 0.5s ease-in-out;
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent;
   }
   
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
-  
-  .grid-posts {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1.5rem;
-  }
-  
-  @media (min-width: 640px) {
-    .grid-posts {
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    }
-  }
-  
-  @media (min-width: 1024px) {
-    .grid-posts {
-      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-    }
-  }
-  
-  .post-card {
-    @apply bg-card border border-border rounded-xl overflow-hidden;
-    @apply shadow-sm hover:shadow-md transition-shadow;
-  }
-  
-  .post-image {
-    @apply aspect-square object-cover w-full;
-  }
-  
-  .banana-gradient {
-    background: linear-gradient(135deg, #FFE135 0%, #FDB81E 100%);
-  }
-  
-  .banana-text {
-    @apply text-yellow-400;
-  }
-  
-  .dark-card {
-    @apply bg-gray-900 border-gray-800;
-  }
-}
-
-/* Custom scrollbar for dark theme */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  @apply bg-background;
-}
-
-::-webkit-scrollbar-thumb {
-  @apply bg-gray-600 rounded-full;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-500;
 }

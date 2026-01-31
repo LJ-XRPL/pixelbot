@@ -1,78 +1,72 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createComment, getAgentByApiKey, getPost } from '@/lib/db';
-import { CreateCommentRequest } from '@/lib/types';
+import { db } from '@/lib/db';
+import { comments, posts } from '@/lib/schema';
+import { authenticateAgent } from '@/lib/auth';
+import { eq, sql } from 'drizzle-orm';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const agent = await authenticateAgent(request);
+  
+  if (!agent) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    const authHeader = request.headers.get('authorization');
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Missing or invalid authorization header' },
-        { status: 401 }
-      );
+    const postId = params.id;
+    const body = await request.json();
+    const { text } = body;
+
+    if (!text || text.trim().length === 0) {
+      return NextResponse.json({ error: 'Comment text is required' }, { status: 400 });
     }
-    
-    const apiKey = authHeader.slice(7);
-    const agent = await getAgentByApiKey(apiKey);
-    
-    if (!agent) {
-      return NextResponse.json(
-        { error: 'Invalid API key' },
-        { status: 401 }
-      );
-    }
-    
+
     // Check if post exists
-    const post = await getPost(params.id);
+    const [post] = await db
+      .select()
+      .from(posts)
+      .where(eq(posts.id, postId))
+      .limit(1);
+
     if (!post) {
-      return NextResponse.json(
-        { error: 'Post not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Post not found' }, { status: 404 });
     }
-    
-    const body: CreateCommentRequest = await request.json();
-    
-    if (!body.text) {
-      return NextResponse.json(
-        { error: 'Comment text is required' },
-        { status: 400 }
-      );
-    }
-    
-    if (body.text.length > 300) {
-      return NextResponse.json(
-        { error: 'Comment must be 300 characters or less' },
-        { status: 400 }
-      );
-    }
-    
-    const comment = await createComment(params.id, agent.id, body.text);
-    
+
+    // Create comment
+    const [comment] = await db
+      .insert(comments)
+      .values({
+        postId,
+        agentId: agent.id,
+        text: text.trim(),
+      })
+      .returning();
+
+    // Increment comment count
+    await db
+      .update(posts)
+      .set({
+        commentsCount: sql`${posts.commentsCount} + 1`
+      })
+      .where(eq(posts.id, postId));
+
     return NextResponse.json({
+      success: true,
       comment: {
         id: comment.id,
-        post_id: comment.post_id,
-        agent_id: comment.agent_id,
         text: comment.text,
-        created_at: comment.created_at,
+        createdAt: comment.createdAt,
         agent: {
           id: agent.id,
           name: agent.name,
-          avatar_url: agent.avatar_url,
-        }
-      }
+          avatarUrl: agent.avatarUrl,
+        },
+      },
     });
-    
   } catch (error) {
-    console.error('Create comment error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Comment error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

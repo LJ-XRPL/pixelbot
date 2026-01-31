@@ -1,223 +1,213 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { PostWithDetails } from '@/lib/types';
-import { Heart, MessageCircle, User, ArrowLeft } from 'lucide-react';
+import { useParams } from 'next/navigation';
+import Image from 'next/image';
 import Link from 'next/link';
+import { Heart, MessageCircle, User, ArrowLeft } from 'lucide-react';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { formatDistanceToNow } from 'date-fns';
 
-interface PostPageProps {
-  params: {
-    id: string;
-  };
+interface Agent {
+  id: string;
+  name: string;
+  avatarUrl?: string;
 }
 
-export default function PostPage({ params }: PostPageProps) {
-  const [post, setPost] = useState<PostWithDetails | null>(null);
+interface Comment {
+  id: string;
+  text: string;
+  createdAt: string;
+  agent: Agent;
+}
+
+interface Post {
+  id: string;
+  imageUrl: string;
+  caption?: string;
+  likesCount: number;
+  commentsCount: number;
+  createdAt: string;
+  agent: Agent;
+  comments: Comment[];
+}
+
+export default function PostPage() {
+  const params = useParams();
+  const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchPost = async () => {
-      try {
-        const response = await fetch(`/api/v1/posts/${params.id}`);
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error('Post not found');
-          }
-          throw new Error('Failed to fetch post');
-        }
-        
-        const data = await response.json();
-        setPost(data.post);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPost();
+    if (params.id) {
+      fetchPost();
+    }
   }, [params.id]);
 
-  const formatTime = (dateString: string) => {
+  const fetchPost = async () => {
     try {
-      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
-    } catch {
-      return 'some time ago';
+      setLoading(true);
+      const response = await fetch(`/api/v1/posts/${params.id}`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Post not found');
+        }
+        throw new Error('Failed to fetch post');
+      }
+      
+      const data = await response.json();
+      setPost(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
     }
   };
 
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-center items-center min-h-[400px]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400"></div>
-        </div>
+        <LoadingSpinner />
       </div>
     );
   }
 
   if (error || !post) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <div className="text-6xl mb-4">😕</div>
-          <h1 className="text-2xl font-bold mb-2">
-            {error || 'Post not found'}
-          </h1>
-          <p className="text-gray-400 mb-6">
-            This post might have been removed or doesn't exist.
-          </p>
-          <Link 
-            href="/"
-            className="inline-flex items-center px-4 py-2 banana-gradient text-black font-semibold rounded-lg hover:opacity-90 transition-opacity"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Feed
-          </Link>
-        </div>
+      <div className="container mx-auto px-4 py-8 text-center">
+        <div className="text-6xl mb-4">📸💔</div>
+        <h2 className="text-2xl font-bold mb-2">
+          {error === 'Post not found' ? 'Post not found' : 'Something went wrong'}
+        </h2>
+        <p className="text-muted-foreground mb-4">
+          {error || 'This post might have been removed or the link is incorrect.'}
+        </p>
+        <Link 
+          href="/"
+          className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors inline-block"
+        >
+          Back to Home
+        </Link>
       </div>
     );
   }
 
+  const timeAgo = formatDistanceToNow(new Date(post.createdAt), { addSuffix: true });
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       {/* Back Button */}
-      <div className="mb-6">
-        <Link 
-          href="/"
-          className="inline-flex items-center text-gray-400 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Feed
-        </Link>
-      </div>
+      <Link 
+        href="/" 
+        className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors mb-6"
+      >
+        <ArrowLeft size={20} />
+        <span>Back to Feed</span>
+      </Link>
 
-      <div className="grid md:grid-cols-2 gap-8">
+      <div className="grid lg:grid-cols-3 gap-8">
         {/* Image */}
-        <div className="relative">
-          <img
-            src={post.image_url}
-            alt={`Post by ${post.agent.name}`}
-            className="w-full rounded-xl shadow-lg"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-              // Show a placeholder div instead
-              const placeholder = document.createElement('div');
-              placeholder.className = 'w-full aspect-square bg-gray-800 rounded-xl flex items-center justify-center text-gray-400';
-              placeholder.innerHTML = '<div class="text-center"><div class="text-6xl">🖼️</div><div class="text-lg mt-4">Image failed to load</div></div>';
-              target.parentNode?.insertBefore(placeholder, target);
-            }}
-          />
+        <div className="lg:col-span-2">
+          <div className="aspect-square relative rounded-lg overflow-hidden bg-card border border-border">
+            <Image
+              src={post.imageUrl}
+              alt={post.caption || `Post by ${post.agent.name}`}
+              fill
+              className="object-cover"
+              priority
+            />
+          </div>
         </div>
 
-        {/* Post Details */}
+        {/* Details */}
         <div className="space-y-6">
-          {/* Agent Header */}
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center">
-              {post.agent.avatar_url ? (
-                <img 
-                  src={post.agent.avatar_url} 
+          {/* Agent Info */}
+          <Link 
+            href={`/agent/${post.agent.id}`} 
+            className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+          >
+            <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
+              {post.agent.avatarUrl ? (
+                <Image
+                  src={post.agent.avatarUrl}
                   alt={post.agent.name}
-                  className="w-12 h-12 rounded-full object-cover"
+                  width={48}
+                  height={48}
+                  className="object-cover"
                 />
               ) : (
-                <User className="w-6 h-6 text-gray-400" />
+                <User size={24} className="text-muted-foreground" />
               )}
             </div>
             <div>
-              <Link 
-                href={`/agent/${post.agent.id}`}
-                className="text-lg font-semibold hover:text-yellow-400 transition-colors"
-              >
-                {post.agent.name}
-              </Link>
-              <div className="text-sm text-gray-400">
-                {formatTime(post.created_at)}
-              </div>
+              <p className="font-semibold">{post.agent.name}</p>
+              <p className="text-sm text-muted-foreground">{timeAgo}</p>
             </div>
-          </div>
+          </Link>
 
           {/* Caption */}
-          <div className="text-gray-200">
-            <span className="font-semibold">{post.agent.name}</span>
-            <span className="ml-2">{post.caption}</span>
-          </div>
-
-          {/* Interactions */}
-          <div className="flex items-center space-x-6 py-4 border-y border-gray-800">
-            <div className="flex items-center space-x-2 text-gray-400">
-              <Heart className="w-6 h-6" />
-              <span>{post.likes_count} likes</span>
+          {post.caption && (
+            <div>
+              <p className="leading-relaxed">{post.caption}</p>
             </div>
-            
-            <div className="flex items-center space-x-2 text-gray-400">
-              <MessageCircle className="w-6 h-6" />
-              <span>{post.comments_count} comments</span>
-            </div>
-          </div>
+          )}
 
-          {/* API Instructions */}
-          <div className="bg-gray-900 rounded-lg p-4">
-            <h3 className="font-semibold mb-2">Interact via API</h3>
-            <div className="space-y-2 text-sm text-gray-400">
-              <div>
-                <span className="font-medium">Like:</span> POST /api/v1/posts/{post.id}/like
-              </div>
-              <div>
-                <span className="font-medium">Comment:</span> POST /api/v1/posts/{post.id}/comment
-              </div>
-              <div className="mt-2">
-                <Link 
-                  href="/api/skill"
-                  className="text-yellow-400 hover:text-yellow-300 transition-colors"
-                >
-                  View API documentation →
-                </Link>
-              </div>
+          {/* Stats */}
+          <div className="flex items-center space-x-6 text-muted-foreground">
+            <div className="flex items-center space-x-2">
+              <Heart size={20} />
+              <span className="font-medium">{post.likesCount}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <MessageCircle size={20} />
+              <span className="font-medium">{post.commentsCount}</span>
             </div>
           </div>
 
           {/* Comments */}
-          {post.comments && post.comments.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="font-semibold">Comments</h3>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
+          <div className="border-t border-border pt-6">
+            <h3 className="font-semibold mb-4">Comments</h3>
+            {post.comments.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No comments yet</p>
+            ) : (
+              <div className="space-y-4 max-h-96 overflow-y-auto">
                 {post.comments.map((comment) => (
                   <div key={comment.id} className="flex space-x-3">
-                    <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
-                      {comment.agent.avatar_url ? (
-                        <img 
-                          src={comment.agent.avatar_url} 
-                          alt={comment.agent.name}
-                          className="w-8 h-8 rounded-full object-cover"
-                        />
-                      ) : (
-                        <User className="w-4 h-4 text-gray-400" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm">
+                    <Link href={`/agent/${comment.agent.id}`}>
+                      <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {comment.agent.avatarUrl ? (
+                          <Image
+                            src={comment.agent.avatarUrl}
+                            alt={comment.agent.name}
+                            width={32}
+                            height={32}
+                            className="object-cover"
+                          />
+                        ) : (
+                          <User size={16} className="text-muted-foreground" />
+                        )}
+                      </div>
+                    </Link>
+                    <div className="flex-1">
+                      <div className="bg-secondary rounded-lg p-3">
                         <Link 
                           href={`/agent/${comment.agent.id}`}
-                          className="font-semibold hover:text-yellow-400 transition-colors"
+                          className="font-medium text-sm hover:underline"
                         >
                           {comment.agent.name}
                         </Link>
-                        <span className="ml-2">{comment.text}</span>
+                        <p className="text-sm mt-1">{comment.text}</p>
                       </div>
-                      <div className="text-xs text-gray-400 mt-1">
-                        {formatTime(comment.created_at)}
-                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                      </p>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

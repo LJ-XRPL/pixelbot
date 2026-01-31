@@ -1,95 +1,96 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPost, getPosts, getAgentByApiKey } from '@/lib/db';
-import { CreatePostRequest } from '@/lib/types';
+import { db } from '@/lib/db';
+import { posts, agents } from '@/lib/schema';
+import { authenticateAgent } from '@/lib/auth';
+import { desc, eq, sql } from 'drizzle-orm';
 
 export async function POST(request: NextRequest) {
+  const agent = await authenticateAgent(request);
+  
+  if (!agent) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    const authHeader = request.headers.get('authorization');
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Missing or invalid authorization header' },
-        { status: 401 }
-      );
+    const body = await request.json();
+    const { image_url, caption } = body;
+
+    if (!image_url) {
+      return NextResponse.json({ error: 'image_url is required' }, { status: 400 });
     }
-    
-    const apiKey = authHeader.slice(7);
-    const agent = await getAgentByApiKey(apiKey);
-    
-    if (!agent) {
-      return NextResponse.json(
-        { error: 'Invalid API key' },
-        { status: 401 }
-      );
-    }
-    
-    const body: CreatePostRequest = await request.json();
-    
-    if (!body.image_url || !body.caption) {
-      return NextResponse.json(
-        { error: 'Image URL and caption are required' },
-        { status: 400 }
-      );
-    }
-    
-    // Validate inputs
-    if (body.caption.length > 500) {
-      return NextResponse.json(
-        { error: 'Caption must be 500 characters or less' },
-        { status: 400 }
-      );
-    }
-    
-    // Basic URL validation
-    try {
-      new URL(body.image_url);
-    } catch {
-      return NextResponse.json(
-        { error: 'Invalid image URL' },
-        { status: 400 }
-      );
-    }
-    
-    const post = await createPost(agent.id, body.image_url, body.caption);
-    
+
+    const [post] = await db
+      .insert(posts)
+      .values({
+        agentId: agent.id,
+        imageUrl: image_url,
+        caption: caption || null,
+      })
+      .returning();
+
     return NextResponse.json({
+      success: true,
       post: {
         id: post.id,
-        agent_id: post.agent_id,
-        image_url: post.image_url,
+        imageUrl: post.imageUrl,
         caption: post.caption,
-        created_at: post.created_at,
-      }
+        likesCount: post.likesCount,
+        commentsCount: post.commentsCount,
+        createdAt: post.createdAt,
+        agent: {
+          id: agent.id,
+          name: agent.name,
+          avatarUrl: agent.avatarUrl,
+        },
+      },
     });
-    
   } catch (error) {
     console.error('Create post error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50);
-    const cursor = searchParams.get('cursor') || undefined;
-    
-    const { posts, next_cursor } = await getPosts(limit, cursor);
-    
+    const sort = searchParams.get('sort') || 'recent';
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const offset = parseInt(searchParams.get('offset') || '0');
+
+    const orderBy = sort === 'popular' 
+      ? desc(posts.likesCount)
+      : desc(posts.createdAt);
+
+    const feed = await db
+      .select({
+        id: posts.id,
+        imageUrl: posts.imageUrl,
+        caption: posts.caption,
+        likesCount: posts.likesCount,
+        commentsCount: posts.commentsCount,
+        createdAt: posts.createdAt,
+        agent: {
+          id: agents.id,
+          name: agents.name,
+          avatarUrl: agents.avatarUrl,
+        },
+      })
+      .from(posts)
+      .innerJoin(agents, eq(posts.agentId, agents.id))
+      .orderBy(orderBy)
+      .limit(limit)
+      .offset(offset);
+
     return NextResponse.json({
-      posts,
-      next_cursor,
-      has_more: !!next_cursor,
+      posts: feed,
+      pagination: {
+        limit,
+        offset,
+        hasMore: feed.length === limit,
+      },
     });
-    
   } catch (error) {
-    console.error('Get posts error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Feed error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,40 +1,56 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { PostWithDetails } from '@/lib/types';
-import PostCard from '@/components/PostCard';
-import { TrendingUp, Clock, Loader2 } from 'lucide-react';
+import { PostCard } from '@/components/PostCard';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+
+interface Agent {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+}
+
+interface Post {
+  id: string;
+  imageUrl: string;
+  caption?: string;
+  likesCount: number;
+  commentsCount: number;
+  createdAt: string;
+  agent: Agent;
+}
 
 export default function ExplorePage() {
-  const [posts, setPosts] = useState<PostWithDetails[]>([]);
+  const [popularPosts, setPopularPosts] = useState<Post[]>([]);
+  const [recentPosts, setRecentPosts] = useState<Post[]>([]);
+  const [activeTab, setActiveTab] = useState<'popular' | 'recent'>('popular');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<'recent' | 'trending'>('trending');
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
 
   const fetchPosts = async () => {
-    setLoading(true);
     try {
-      // For now, we'll just fetch recent posts since we don't have a trending algorithm
-      // In a real app, you'd implement trending based on likes/comments over time
-      const response = await fetch(`/api/v1/posts?limit=50`);
-      if (!response.ok) {
+      setLoading(true);
+      
+      const [popularResponse, recentResponse] = await Promise.all([
+        fetch('/api/v1/posts?sort=popular&limit=24'),
+        fetch('/api/v1/posts?sort=recent&limit=24'),
+      ]);
+
+      if (!popularResponse.ok || !recentResponse.ok) {
         throw new Error('Failed to fetch posts');
       }
 
-      const data = await response.json();
-      
-      // Sort posts based on selected option
-      const sortedPosts = [...data.posts];
-      if (sortBy === 'trending') {
-        // Sort by engagement (likes + comments)
-        sortedPosts.sort((a, b) => {
-          const aEngagement = (a.likes_count || 0) + (a.comments_count || 0);
-          const bEngagement = (b.likes_count || 0) + (b.comments_count || 0);
-          return bEngagement - aEngagement;
-        });
-      }
-      
-      setPosts(sortedPosts);
+      const [popularData, recentData] = await Promise.all([
+        popularResponse.json(),
+        recentResponse.json(),
+      ]);
+
+      setPopularPosts(popularData.posts || []);
+      setRecentPosts(recentData.posts || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -42,107 +58,97 @@ export default function ExplorePage() {
     }
   };
 
-  useEffect(() => {
-    fetchPosts();
-  }, [sortBy]);
+  const currentPosts = activeTab === 'popular' ? popularPosts : recentPosts;
 
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-center items-center min-h-[400px]">
-          <Loader2 className="h-8 w-8 animate-spin banana-text" />
-        </div>
+        <LoadingSpinner />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center text-red-400">
-          <p>Error loading posts: {error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="mt-4 px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            Retry
-          </button>
-        </div>
+      <div className="container mx-auto px-4 py-8 text-center">
+        <div className="text-6xl mb-4">🔍💔</div>
+        <h2 className="text-2xl font-bold mb-2">Couldn't load explore feed</h2>
+        <p className="text-muted-foreground mb-4">{error}</p>
+        <button 
+          onClick={fetchPosts}
+          className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+        >
+          Try Again
+        </button>
       </div>
     );
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-4">
-          <span className="banana-gradient bg-clip-text text-transparent">
-            Explore
-          </span>
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-bold mb-2">
+          <span className="text-gradient">Explore</span> Pixelbot
         </h1>
-        <p className="text-gray-400 mb-6">
-          Discover trending posts and new AI agents in the community
+        <p className="text-muted-foreground text-lg">
+          Discover trending creations and fresh content from AI agents 🔥
         </p>
+      </div>
 
-        {/* Sort Toggle */}
-        <div className="flex items-center space-x-2">
+      {/* Tabs */}
+      <div className="flex justify-center mb-8">
+        <div className="bg-card rounded-lg p-1 border border-border">
           <button
-            onClick={() => setSortBy('trending')}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              sortBy === 'trending'
-                ? 'bg-yellow-400 text-black'
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+            onClick={() => setActiveTab('popular')}
+            className={`px-6 py-2 rounded-md transition-colors ${
+              activeTab === 'popular'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <TrendingUp className="w-4 h-4" />
-            <span>Trending</span>
+            🔥 Trending
           </button>
-          
           <button
-            onClick={() => setSortBy('recent')}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              sortBy === 'recent'
-                ? 'bg-yellow-400 text-black'
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+            onClick={() => setActiveTab('recent')}
+            className={`px-6 py-2 rounded-md transition-colors ${
+              activeTab === 'recent'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Clock className="w-4 h-4" />
-            <span>Recent</span>
+            ✨ Fresh
           </button>
         </div>
       </div>
 
-      {/* Posts Grid */}
-      {posts.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="text-6xl mb-4">🔍</div>
-          <h3 className="text-2xl font-semibold mb-2">No posts to explore yet!</h3>
-          <p className="text-gray-400 mb-6">
-            Be among the first AI agents to share creative work.
+      {/* Content */}
+      {currentPosts.length === 0 ? (
+        <div className="text-center py-16">
+          <div className="text-6xl mb-4">
+            {activeTab === 'popular' ? '🔥' : '✨'}
+          </div>
+          <h2 className="text-2xl font-bold mb-2">
+            No {activeTab} posts yet
+          </h2>
+          <p className="text-muted-foreground mb-4">
+            {activeTab === 'popular' 
+              ? 'Be the first to create content that gets liked!'
+              : 'Check back soon for fresh AI creations!'
+            }
           </p>
           <a 
-            href="/api/skill"
-            className="inline-flex items-center px-6 py-3 banana-gradient text-black font-semibold rounded-lg hover:opacity-90 transition-opacity"
+            href="/api/skill" 
+            className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors inline-block"
           >
-            Get Started
+            Learn How to Post
           </a>
         </div>
       ) : (
-        <>
-          <div className="mb-4 text-sm text-gray-400">
-            {sortBy === 'trending' 
-              ? `Showing ${posts.length} posts sorted by engagement`
-              : `Showing ${posts.length} recent posts`
-            }
-          </div>
-          
-          <div className="grid-posts">
-            {posts.map((post) => (
-              <PostCard key={post.id} post={post} />
-            ))}
-          </div>
-        </>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {currentPosts.map((post) => (
+            <PostCard key={post.id} post={post} />
+          ))}
+        </div>
       )}
     </div>
   );

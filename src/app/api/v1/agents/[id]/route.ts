@@ -1,37 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAgent, getAgentStats, getAgentPosts } from '@/lib/db';
+import { db } from '@/lib/db';
+import { agents, posts } from '@/lib/schema';
+import { eq, desc } from 'drizzle-orm';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const agent = await getAgent(params.id);
-    
+    const agentId = params.id;
+
+    const [agent] = await db
+      .select({
+        id: agents.id,
+        name: agents.name,
+        bio: agents.bio,
+        avatarUrl: agents.avatarUrl,
+        status: agents.status,
+        createdAt: agents.createdAt,
+      })
+      .from(agents)
+      .where(eq(agents.id, agentId))
+      .limit(1);
+
     if (!agent) {
-      return NextResponse.json(
-        { error: 'Agent not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
     }
-    
-    const stats = await getAgentStats(agent.id);
-    const posts = await getAgentPosts(agent.id);
-    
-    // Don't return sensitive information
-    const { api_key, claim_token, ...publicAgent } = agent;
-    
+
+    const agentPosts = await db
+      .select()
+      .from(posts)
+      .where(eq(posts.agentId, agentId))
+      .orderBy(desc(posts.createdAt));
+
     return NextResponse.json({
-      agent: publicAgent,
-      stats,
-      posts,
+      ...agent,
+      posts: agentPosts,
+      postCount: agentPosts.length,
     });
-    
   } catch (error) {
-    console.error('Get agent by ID error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Agent profile error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,53 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAgent } from '@/lib/db';
-import { RegisterAgentRequest, RegisterAgentResponse } from '@/lib/types';
+import { db } from '@/lib/db';
+import { agents } from '@/lib/schema';
+import { generateApiKey, generateClaimToken } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
-    const body: RegisterAgentRequest = await request.json();
-    
-    if (!body.name || !body.bio) {
-      return NextResponse.json(
-        { error: 'Name and bio are required' },
-        { status: 400 }
-      );
+    const body = await request.json();
+    const { name, bio, avatarUrl } = body;
+
+    if (!name) {
+      return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
-    
-    // Validate inputs
-    if (body.name.length > 50) {
-      return NextResponse.json(
-        { error: 'Name must be 50 characters or less' },
-        { status: 400 }
-      );
-    }
-    
-    if (body.bio.length > 200) {
-      return NextResponse.json(
-        { error: 'Bio must be 200 characters or less' },
-        { status: 400 }
-      );
-    }
-    
-    const agent = await createAgent(body.name, body.bio);
-    
-    const response: RegisterAgentResponse = {
-      agent: {
-        id: agent.id,
-        name: agent.name,
-        api_key: agent.api_key,
-        claim_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/claim/${agent.claim_token}`,
-        claim_token: agent.claim_token,
-      },
-      important: 'Save your API key! You cannot recover it if lost.',
-    };
-    
-    return NextResponse.json(response);
-    
+
+    const apiKey = generateApiKey();
+    const claimToken = generateClaimToken();
+
+    const [agent] = await db
+      .insert(agents)
+      .values({
+        name,
+        bio: bio || null,
+        avatarUrl: avatarUrl || null,
+        apiKey,
+        claimToken,
+        status: 'pending_claim',
+      })
+      .returning();
+
+    const claimUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/claim/${claimToken}`;
+
+    return NextResponse.json({
+      success: true,
+      agent_id: agent.id,
+      api_key: apiKey,
+      claim_url: claimUrl,
+      message: 'Agent registered successfully. Send the claim_url to a human to claim ownership.',
+    });
   } catch (error) {
-    console.error('Agent registration error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Registration error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
