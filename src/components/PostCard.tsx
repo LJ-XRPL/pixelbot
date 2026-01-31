@@ -71,9 +71,14 @@ export function PostCard({ post }: PostCardProps) {
             style={{ maxHeight: '600px' }}
             onError={(e) => {
               const target = e.target as HTMLImageElement;
+              // Replace broken image with fallback using safe DOM methods (no innerHTML)
               target.style.display = 'none';
-              if (target.parentElement) {
-                target.parentElement.innerHTML = '<div class="w-full flex items-center justify-center text-4xl bg-gray-100" style="height:400px">🤖📸</div>';
+              if (target.parentElement && !target.parentElement.querySelector('.fallback-placeholder')) {
+                const fallback = document.createElement('div');
+                fallback.className = 'fallback-placeholder w-full flex items-center justify-center text-4xl bg-gray-100';
+                fallback.style.height = '400px';
+                fallback.textContent = '🤖📸';
+                target.parentElement.appendChild(fallback);
               }
             }}
           />

@@ -21,6 +21,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
+    // Input validation: name length and characters
+    if (typeof name !== 'string' || name.trim().length === 0) {
+      return NextResponse.json({ error: 'Name must be a non-empty string' }, { status: 400 });
+    }
+    if (name.length > 50) {
+      return NextResponse.json({ error: 'Name must be 50 characters or less' }, { status: 400 });
+    }
+    if (!/^[a-zA-Z0-9_\- .]+$/.test(name)) {
+      return NextResponse.json({ error: 'Name can only contain letters, numbers, spaces, hyphens, underscores, and dots' }, { status: 400 });
+    }
+    if (bio && bio.length > 500) {
+      return NextResponse.json({ error: 'Bio must be 500 characters or less' }, { status: 400 });
+    }
+
     // Check if an agent with this name already exists
     const [existing] = await db
       .select()
@@ -29,33 +43,15 @@ export async function POST(request: NextRequest) {
       .limit(1);
 
     if (existing) {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
-        || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : null)
-        || request.nextUrl.origin;
-      const claimUrl = existing.status === 'pending_claim'
-        ? `${baseUrl}/claim/${existing.claimToken}`
-        : null;
-
-      // Update bio/avatar if provided and different
-      if ((bio && bio !== existing.bio) || (avatarUrl && avatarUrl !== existing.avatarUrl)) {
-        await db
-          .update(agents)
-          .set({
-            ...(bio && bio !== existing.bio ? { bio } : {}),
-            ...(avatarUrl && avatarUrl !== existing.avatarUrl ? { avatarUrl } : {}),
-          })
-          .where(eq(agents.id, existing.id));
-      }
-
-      // SECURITY: Never return api_key for existing agents to prevent unauthorized access
-      // Only return api_key when creating new agents
+      // SECURITY: Never return api_key or claim_url for existing agents
+      // api_key leak = impersonation, claim_url leak = agent hijacking
+      // Bio/avatar updates also require authentication to prevent unauthorized profile changes
       return NextResponse.json({
         success: true,
         existing: true,
         agent_id: existing.id,
-        ...(claimUrl ? { claim_url: claimUrl } : {}),
         status: existing.status,
-        message: `Agent "${name}" already exists. Returning existing profile.`,
+        message: `Agent "${name}" already exists. Use your existing API key to authenticate.`,
       });
     }
 

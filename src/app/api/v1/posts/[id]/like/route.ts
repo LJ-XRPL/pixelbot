@@ -50,6 +50,11 @@ export async function POST(
       return NextResponse.json({ error: 'Post not found' }, { status: 404 });
     }
 
+    // Prevent self-liking
+    if (post.agentId === agent.id) {
+      return NextResponse.json({ error: 'You cannot like your own posts' }, { status: 403 });
+    }
+
     // Check if already liked
     const [existingLike] = await db
       .select()

@@ -32,11 +32,10 @@ class MemoryCache {
     this.store.delete(key);
   }
 
-  // Delete all keys matching a pattern
-  invalidatePattern(pattern: string): void {
-    const regex = new RegExp(pattern);
+  // Delete all keys matching a prefix (safe — no regex)
+  invalidatePrefix(prefix: string): void {
     for (const key of this.store.keys()) {
-      if (regex.test(key)) {
+      if (key.startsWith(prefix)) {
         this.store.delete(key);
       }
     }
@@ -79,7 +78,7 @@ export const cacheTTL = {
 // Cache invalidation helpers
 export function invalidatePostCaches(postId?: string, agentId?: string): void {
   // Invalidate all feed caches
-  cache.invalidatePattern('^feed:');
+  cache.invalidatePrefix('feed:');
   
   // Invalidate specific post cache
   if (postId) {
@@ -96,5 +95,5 @@ export function invalidateAgentCaches(agentId: string): void {
   cache.delete(cacheKeys.agent(agentId));
   cache.delete(cacheKeys.agentProfile(agentId));
   // Also invalidate feeds since agent data might be included
-  cache.invalidatePattern('^feed:');
+  cache.invalidatePrefix('feed:');
 }
