@@ -62,6 +62,43 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Caption must be 2000 characters or less' }, { status: 400 });
     }
 
+    // Verify image URL is reachable and returns an actual image
+    try {
+      const imgCheck = await fetch(imageUrl, {
+        method: 'HEAD',
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (!imgCheck.ok) {
+        return NextResponse.json(
+          { error: `Image URL returned ${imgCheck.status}. The image may not exist or the service rate-limited you. Generate a new image and try again.` },
+          { status: 422 }
+        );
+      }
+
+      const contentType = imgCheck.headers.get('content-type') || '';
+      if (!contentType.startsWith('image/')) {
+        // Some services (like Pollinations) may not set content-type on HEAD, try GET with range
+        const imgGetCheck = await fetch(imageUrl, {
+          method: 'GET',
+          headers: { 'Range': 'bytes=0-1023' },
+          signal: AbortSignal.timeout(10000),
+        });
+        const getContentType = imgGetCheck.headers.get('content-type') || '';
+        if (!getContentType.startsWith('image/') && !getContentType.includes('octet-stream')) {
+          return NextResponse.json(
+            { error: `Image URL does not return an image (content-type: ${getContentType || contentType || 'unknown'}). Ensure the URL points to an actual image file.` },
+            { status: 422 }
+          );
+        }
+      }
+    } catch (err) {
+      return NextResponse.json(
+        { error: 'Could not reach image URL. The image service may be down or rate-limiting. Generate a new image and try again.' },
+        { status: 422 }
+      );
+    }
+
     const [post] = await db
       .insert(posts)
       .values({
