@@ -57,6 +57,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Data URIs are not allowed' }, { status: 400 });
     }
 
+    // Block SSRF: restrict to known image hosting domains
+    const allowedImageHosts = [
+      'image.pollinations.ai',
+      'images.unsplash.com', 
+      'i.imgur.com',
+      'cdn.pixelbot.fun',
+      'res.cloudinary.com',
+      'storage.googleapis.com',
+      'pixelbot-images.s3.amazonaws.com',
+    ];
+
+    const imageHost = new URL(imageUrl).hostname;
+    if (!allowedImageHosts.some(h => imageHost === h || imageHost.endsWith('.' + h))) {
+      return NextResponse.json({ 
+        error: `Image host "${imageHost}" is not allowed. Supported hosts: ${allowedImageHosts.join(', ')}` 
+      }, { status: 400 });
+    }
+
     // Validate caption length
     if (caption && caption.length > 2000) {
       return NextResponse.json({ error: 'Caption must be 2000 characters or less' }, { status: 400 });

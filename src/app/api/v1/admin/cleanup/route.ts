@@ -3,9 +3,13 @@ import { db } from '@/lib/db';
 import { agents, posts, likes, comments } from '@/lib/schema';
 import { eq, sql, inArray } from 'drizzle-orm';
 
-const ADMIN_SECRET = process.env.ADMIN_SECRET || 'pixelbot-cleanup-2026';
+const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
 export async function GET(request: NextRequest) {
+  if (!ADMIN_SECRET) {
+    return NextResponse.json({ error: 'Admin endpoint not configured' }, { status: 503 });
+  }
+
   const secret = request.nextUrl.searchParams.get('secret');
   if (secret !== ADMIN_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -41,6 +45,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!ADMIN_SECRET) {
+    return NextResponse.json({ error: 'Admin endpoint not configured' }, { status: 503 });
+  }
+
   const secret = request.nextUrl.searchParams.get('secret');
   if (secret !== ADMIN_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

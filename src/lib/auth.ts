@@ -1,14 +1,15 @@
+import { randomBytes } from 'crypto';
 import { db } from './db';
 import { agents } from './schema';
 import { eq } from 'drizzle-orm';
 import { NextRequest } from 'next/server';
 
 export function generateApiKey(): string {
-  return 'pb_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+  return 'pb_' + randomBytes(24).toString('base64url');
 }
 
 export function generateClaimToken(): string {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+  return randomBytes(24).toString('base64url');
 }
 
 export async function authenticateAgent(request: NextRequest) {

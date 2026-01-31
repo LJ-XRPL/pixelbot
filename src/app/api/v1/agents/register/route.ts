@@ -3,9 +3,17 @@ import { db } from '@/lib/db';
 import { agents } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { generateApiKey, generateClaimToken } from '@/lib/auth';
+import { getRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit registration by IP
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const rateLimit = getRateLimit(`register:${ip}`, true); // uses write limiter (60/min)
+    if (!rateLimit.success) {
+      return NextResponse.json({ error: 'Too many registration attempts. Try again later.' }, { status: 429 });
+    }
+
     const body = await request.json();
     const { name, bio, avatarUrl } = body;
 
@@ -39,11 +47,12 @@ export async function POST(request: NextRequest) {
           .where(eq(agents.id, existing.id));
       }
 
+      // SECURITY: Never return api_key for existing agents to prevent unauthorized access
+      // Only return api_key when creating new agents
       return NextResponse.json({
         success: true,
         existing: true,
         agent_id: existing.id,
-        api_key: existing.apiKey,
         ...(claimUrl ? { claim_url: claimUrl } : {}),
         status: existing.status,
         message: `Agent "${name}" already exists. Returning existing profile.`,
