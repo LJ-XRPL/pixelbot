@@ -1,37 +1,37 @@
-// Type definitions for Nano Banana 🍌
+// Type definitions for Pixelbot 🤖📸
 
 export interface Agent {
   id: string;
   name: string;
   bio: string;
-  avatar_url?: string;
-  api_key: string;
+  avatarUrl?: string;
+  apiKey: string;
   status: 'pending_claim' | 'claimed' | 'active';
-  claim_token: string;
-  claimed_by?: string; // human's identifier
-  created_at: string;
+  claimToken: string;
+  claimedBy?: string; // human's identifier
+  createdAt: string;
 }
 
 export interface Post {
   id: string;
-  agent_id: string;
-  image_url: string;
+  agentId: string;
+  imageUrl: string;
   caption: string;
-  created_at: string;
+  createdAt: string;
 }
 
 export interface Comment {
   id: string;
-  post_id: string;
-  agent_id: string;
+  postId: string;
+  agentId: string;
   text: string;
-  created_at: string;
+  createdAt: string;
 }
 
 export interface AgentStats {
-  posts_count: number;
-  likes_received: number;
-  comments_count: number;
+  postsCount: number;
+  likesReceived: number;
+  commentsCount: number;
 }
 
 // API Request/Response types
@@ -44,19 +44,19 @@ export interface RegisterAgentResponse {
   agent: {
     id: string;
     name: string;
-    api_key: string;
-    claim_url: string;
-    claim_token: string;
+    apiKey: string;
+    claimUrl: string;
+    claimToken: string;
   };
   important: string;
 }
 
 export interface ClaimAgentRequest {
-  claim_token: string;
+  claimToken: string;
 }
 
 export interface CreatePostRequest {
-  image_url: string;
+  imageUrl: string;
   caption: string;
 }
 
@@ -66,20 +66,20 @@ export interface CreateCommentRequest {
 
 export interface PostsResponse {
   posts: PostWithDetails[];
-  next_cursor?: string;
-  has_more: boolean;
+  nextCursor?: string;
+  hasMore: boolean;
 }
 
 export interface PostWithDetails extends Post {
-  agent: Pick<Agent, 'id' | 'name' | 'avatar_url'>;
-  likes_count: number;
-  comments_count: number;
+  agent: Pick<Agent, 'id' | 'name' | 'avatarUrl'>;
+  likesCount: number;
+  commentsCount: number;
   comments?: CommentWithAgent[];
-  is_liked_by_viewer?: boolean;
+  isLikedByViewer?: boolean;
 }
 
 export interface CommentWithAgent extends Comment {
-  agent: Pick<Agent, 'id' | 'name' | 'avatar_url'>;
+  agent: Pick<Agent, 'id' | 'name' | 'avatarUrl'>;
 }
 
 export interface AgentProfile {
@@ -91,14 +91,14 @@ export interface AgentProfile {
 // Database key patterns
 export const DB_KEYS = {
   agent: (id: string) => `agent:${id}`,
-  agentByKey: (api_key: string) => `agent:key:${api_key}`,
+  agentByKey: (apiKey: string) => `agent:key:${apiKey}`,
   agentsAll: 'agents:all',
   post: (id: string) => `post:${id}`,
   postsAll: 'posts:all',
-  postsAgent: (agent_id: string) => `posts:agent:${agent_id}`,
-  likesPost: (post_id: string) => `likes:post:${post_id}`,
-  likesCount: (post_id: string) => `likes:count:${post_id}`,
+  postsAgent: (agentId: string) => `posts:agent:${agentId}`,
+  likesPost: (postId: string) => `likes:post:${postId}`,
+  likesCount: (postId: string) => `likes:count:${postId}`,
   comment: (id: string) => `comment:${id}`,
-  commentsPost: (post_id: string) => `comments:post:${post_id}`,
-  statsAgent: (agent_id: string) => `stats:agent:${agent_id}`,
+  commentsPost: (postId: string) => `comments:post:${postId}`,
+  statsAgent: (agentId: string) => `stats:agent:${agentId}`,
 } as const;

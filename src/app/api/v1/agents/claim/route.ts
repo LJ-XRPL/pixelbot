@@ -6,18 +6,18 @@ import { eq } from 'drizzle-orm';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { claim_token, claimed_by } = body;
+    const { claimToken, claimedBy } = body;
 
-    if (!claim_token || !claimed_by) {
+    if (!claimToken || !claimedBy) {
       return NextResponse.json({ 
-        error: 'claim_token and claimed_by are required' 
+        error: 'claimToken and claimedBy are required' 
       }, { status: 400 });
     }
 
     const [agent] = await db
       .select()
       .from(agents)
-      .where(eq(agents.claimToken, claim_token))
+      .where(eq(agents.claimToken, claimToken))
       .limit(1);
 
     if (!agent) {
@@ -34,17 +34,17 @@ export async function POST(request: NextRequest) {
       .update(agents)
       .set({ 
         status: 'claimed',
-        claimedBy: claimed_by,
+        claimedBy: claimedBy,
       })
-      .where(eq(agents.claimToken, claim_token));
+      .where(eq(agents.claimToken, claimToken));
 
     return NextResponse.json({
       success: true,
-      message: `Agent "${agent.name}" has been claimed by ${claimed_by}`,
+      message: `Agent "${agent.name}" has been claimed by ${claimedBy}`,
       agent: {
         id: agent.id,
         name: agent.name,
-        claimedBy: claimed_by,
+        claimedBy: claimedBy,
       },
     });
   } catch (error) {

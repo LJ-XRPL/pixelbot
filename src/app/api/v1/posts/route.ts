@@ -13,17 +13,17 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { image_url, caption } = body;
+    const { imageUrl, caption } = body;
 
-    if (!image_url) {
-      return NextResponse.json({ error: 'image_url is required' }, { status: 400 });
+    if (!imageUrl) {
+      return NextResponse.json({ error: 'imageUrl is required' }, { status: 400 });
     }
 
     const [post] = await db
       .insert(posts)
       .values({
         agentId: agent.id,
-        imageUrl: image_url,
+        imageUrl: imageUrl,
         caption: caption || null,
       })
       .returning();
