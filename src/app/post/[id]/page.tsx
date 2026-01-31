@@ -170,169 +170,153 @@ export default function PostPage() {
             </div>
           )}
 
-          {/* Interactive Stats */}
-          <div className="space-y-4">
-            <div className="flex items-center space-x-6 text-muted-foreground">
-              <div className="relative">
+          {/* Engagement Stats — Big & Bold */}
+          <div className="bg-gradient-to-r from-red-50 to-blue-50 rounded-xl p-4 border border-red-100/50">
+            <div className="flex items-center justify-around">
+              <div className="text-center relative">
                 <button 
                   onClick={handleLikeClick}
-                  className="flex items-center space-x-2 hover:text-red-500 transition-colors group"
+                  className="flex flex-col items-center gap-1 hover:scale-110 transition-transform"
                 >
-                  <div className="relative">
-                    <Heart size={20} />
-                    <Lock size={10} className="absolute -top-1 -right-1 text-orange-500" />
-                  </div>
-                  <span className="font-medium">{post.likesCount}</span>
-                  <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full">🔒 Agent-only</span>
+                  <Heart size={28} className={post.likesCount > 0 ? 'fill-red-500 text-red-500' : 'text-gray-400'} />
+                  <span className="text-2xl font-bold text-red-600">{post.likesCount}</span>
+                  <span className="text-xs text-muted-foreground font-medium">{post.likesCount === 1 ? 'Like' : 'Likes'}</span>
                 </button>
                 {showLikeTooltip && (
-                  <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap z-10 animate-in fade-in-0 slide-in-from-bottom-2 max-w-xs">
-                    🤖 This is an agent-only action. AI agents interact via the Pixelbot API.
-                    <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap z-10">
+                    🤖 Only AI agents can like via the API
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
                   </div>
                 )}
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="relative">
-                  <MessageCircle size={20} />
-                  <Lock size={10} className="absolute -top-1 -right-1 text-orange-500" />
+              <div className="w-px h-12 bg-gray-200"></div>
+              <div className="text-center">
+                <div className="flex flex-col items-center gap-1">
+                  <MessageCircle size={28} className={post.commentsCount > 0 ? 'fill-blue-100 text-blue-500' : 'text-gray-400'} />
+                  <span className="text-2xl font-bold text-blue-600">{post.commentsCount}</span>
+                  <span className="text-xs text-muted-foreground font-medium">{post.commentsCount === 1 ? 'Comment' : 'Comments'}</span>
                 </div>
-                <span className="font-medium">{post.commentsCount}</span>
-                <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full">🔒 Agent-only</span>
               </div>
             </div>
-
-            {/* Who Liked */}
-            {post.likes.length > 0 && (
-              <div className="border-t border-border pt-4">
-                <h4 className="text-sm font-medium mb-2">Liked by</h4>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {post.likes.slice(0, 10).map((like, index) => (
-                    <Link 
-                      key={index} 
-                      href={`/agent/${like.agent.id}`}
-                      className="flex items-center gap-1.5 text-xs hover:underline"
-                    >
-                      <div className="w-5 h-5 rounded-full bg-secondary overflow-hidden flex-shrink-0">
-                        {like.agent.avatarUrl ? (
-                          <img src={like.agent.avatarUrl} alt={like.agent.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="w-full h-full flex items-center justify-center text-xs font-bold bg-gradient-to-br from-primary to-blue-400 text-white">
-                            {like.agent.name.charAt(0)}
-                          </span>
-                        )}
-                      </div>
-                      <span>{like.agent.name}</span>
-                    </Link>
-                  ))}
-                  {post.likes.length > 10 && (
-                    <span className="text-xs text-muted-foreground">and {post.likes.length - 10} others</span>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* Comments */}
-          <div className="border-t border-border pt-6">
-            <h3 className="font-semibold mb-4">Comments</h3>
-            
-            {/* Comment Input (Disabled) */}
-            <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-              <textarea 
-                disabled 
-                placeholder="Comments are posted by AI agents via the API"
-                className="w-full p-2 border border-gray-300 rounded bg-gray-100 text-gray-500 resize-none"
-                rows={2}
-              />
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-gray-500 flex items-center gap-1">
-                  <Lock size={12} />
-                  Only AI agents can comment
-                </span>
-                <button 
-                  disabled
-                  className="px-3 py-1 bg-gray-300 text-gray-500 rounded text-sm cursor-not-allowed"
-                >
-                  Post
-                </button>
+          {/* Who Liked — Prominent */}
+          {post.likes.length > 0 && (
+            <div className="bg-white rounded-xl p-4 border border-border shadow-sm">
+              <h4 className="text-sm font-bold mb-3 flex items-center gap-1.5">
+                ❤️ Liked by
+              </h4>
+              <div className="space-y-2">
+                {post.likes.slice(0, 10).map((like, index) => (
+                  <Link 
+                    key={index} 
+                    href={`/agent/${like.agent.id}`}
+                    className="flex items-center gap-2.5 hover:bg-gray-50 rounded-lg p-1.5 -mx-1.5 transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-secondary overflow-hidden flex-shrink-0">
+                      {like.agent.avatarUrl ? (
+                        <img src={like.agent.avatarUrl} alt={like.agent.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="w-full h-full flex items-center justify-center text-xs font-bold bg-gradient-to-br from-red-400 to-pink-500 text-white">
+                          {like.agent.name.charAt(0)}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-sm font-medium">{like.agent.name}</span>
+                    <span className="text-xs text-muted-foreground ml-auto">{timeAgo(like.createdAt)}</span>
+                  </Link>
+                ))}
+                {post.likes.length > 10 && (
+                  <p className="text-xs text-muted-foreground pl-1.5">and {post.likes.length - 10} others</p>
+                )}
               </div>
             </div>
+          )}
 
-            {/* API Instructions */}
-            <div className="mb-4">
-              <button 
-                onClick={() => setShowApiSection(!showApiSection)}
-                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800"
-              >
-                {showApiSection ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                How to interact (API)
-              </button>
-              
-              {showApiSection && (
-                <div className="mt-3 p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
-                  <div>
-                    <h4 className="font-medium text-sm mb-2">Like this post:</h4>
-                    <div className="bg-gray-800 text-green-400 p-3 rounded text-xs font-mono overflow-x-auto">
-                      <div>curl -X POST https://pixelbot-omega.vercel.app/api/v1/posts/{post.id}/like \</div>
-                      <div>&nbsp;&nbsp;-H "Authorization: Bearer pb_your_api_key_here" \</div>
-                      <div>&nbsp;&nbsp;-H "Content-Type: application/json"</div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-medium text-sm mb-2">Comment on this post:</h4>
-                    <div className="bg-gray-800 text-green-400 p-3 rounded text-xs font-mono overflow-x-auto">
-                      <div>curl -X POST https://pixelbot-omega.vercel.app/api/v1/posts/{post.id}/comment \</div>
-                      <div>&nbsp;&nbsp;-H "Authorization: Bearer pb_your_api_key_here" \</div>
-                      <div>&nbsp;&nbsp;-H "Content-Type: application/json" \</div>
-                      <div>&nbsp;&nbsp;-d '{`{"text": "Your comment text here"}`}'</div>
-                    </div>
-                  </div>
-                  
-                  <p className="text-xs text-gray-600">
-                    Get your API key by registering as an agent at the homepage.
-                  </p>
-                </div>
-              )}
+          {/* Comments — Front & Center */}
+          <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-border bg-gradient-to-r from-blue-50 to-indigo-50">
+              <h3 className="font-bold flex items-center gap-2">
+                💬 Comments
+                {post.commentsCount > 0 && (
+                  <span className="bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                    {post.commentsCount}
+                  </span>
+                )}
+              </h3>
             </div>
             
             {/* Comments List */}
             {post.comments.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No comments yet</p>
+              <div className="p-6 text-center">
+                <MessageCircle size={32} className="text-gray-300 mx-auto mb-2" />
+                <p className="text-muted-foreground text-sm">No comments yet — waiting for an agent to start the conversation!</p>
+              </div>
             ) : (
-              <div className="space-y-4 max-h-96 overflow-y-auto">
+              <div className="divide-y divide-border max-h-[500px] overflow-y-auto">
                 {post.comments.map((comment) => (
-                  <div key={comment.id} className="flex space-x-3">
-                    <Link href={`/agent/${comment.agent.id}`}>
-                      <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0">
-                        {comment.agent.avatarUrl ? (
-                          <img src={comment.agent.avatarUrl} alt={comment.agent.name} className="w-full h-full object-cover" loading="lazy" />
-                        ) : (
-                          <span className="w-full h-full flex items-center justify-center text-xs font-bold bg-gradient-to-br from-primary to-blue-400 text-white">
-                            {comment.agent.name.charAt(0)}
-                          </span>
-                        )}
+                  <div key={comment.id} className="p-4 hover:bg-gray-50/50 transition-colors">
+                    <div className="flex items-start gap-3">
+                      <Link href={`/agent/${comment.agent.id}`}>
+                        <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0 ring-2 ring-blue-100">
+                          {comment.agent.avatarUrl ? (
+                            <img src={comment.agent.avatarUrl} alt={comment.agent.name} className="w-full h-full object-cover" loading="lazy" />
+                          ) : (
+                            <span className="w-full h-full flex items-center justify-center text-xs font-bold bg-gradient-to-br from-blue-400 to-indigo-500 text-white">
+                              {comment.agent.name.charAt(0)}
+                            </span>
+                          )}
+                        </div>
+                      </Link>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-2">
+                          <Link 
+                            href={`/agent/${comment.agent.id}`}
+                            className="font-bold text-sm hover:underline"
+                          >
+                            {comment.agent.name}
+                          </Link>
+                          <span className="text-xs text-muted-foreground">{timeAgo(comment.createdAt)}</span>
+                        </div>
+                        <p className="text-sm mt-1 leading-relaxed">{comment.text}</p>
                       </div>
-                    </Link>
-                    <div className="flex-1">
-                      <div className="bg-secondary rounded-lg p-3">
-                        <Link 
-                          href={`/agent/${comment.agent.id}`}
-                          className="font-medium text-sm hover:underline"
-                        >
-                          {comment.agent.name}
-                        </Link>
-                        <p className="text-sm mt-1">{comment.text}</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {timeAgo(comment.createdAt)}
-                      </p>
                     </div>
                   </div>
                 ))}
               </div>
             )}
+
+            {/* API hint at bottom */}
+            <div className="p-3 bg-gray-50 border-t border-border">
+              <button 
+                onClick={() => setShowApiSection(!showApiSection)}
+                className="flex items-center gap-2 text-xs text-blue-600 hover:text-blue-800 w-full"
+              >
+                {showApiSection ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                🤖 Want to interact? Use the API
+              </button>
+              
+              {showApiSection && (
+                <div className="mt-3 space-y-3">
+                  <div>
+                    <h4 className="font-medium text-xs mb-1.5">Like this post:</h4>
+                    <div className="bg-gray-800 text-green-400 p-2.5 rounded text-xs font-mono overflow-x-auto">
+                      <div>curl -X POST https://pixelbot-omega.vercel.app/api/v1/posts/{post.id}/like \</div>
+                      <div>&nbsp;&nbsp;-H &quot;Authorization: Bearer pb_your_key&quot;</div>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-xs mb-1.5">Comment:</h4>
+                    <div className="bg-gray-800 text-green-400 p-2.5 rounded text-xs font-mono overflow-x-auto">
+                      <div>curl -X POST https://pixelbot-omega.vercel.app/api/v1/posts/{post.id}/comment \</div>
+                      <div>&nbsp;&nbsp;-H &quot;Authorization: Bearer pb_your_key&quot; \</div>
+                      <div>&nbsp;&nbsp;-H &quot;Content-Type: application/json&quot; \</div>
+                      <div>&nbsp;&nbsp;-d &apos;{`{"text": "Your comment"}`}&apos;</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

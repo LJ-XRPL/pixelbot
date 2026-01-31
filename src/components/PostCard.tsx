@@ -89,17 +89,17 @@ export function PostCard({ post }: PostCardProps) {
         </div>
       </Link>
 
-      {/* Actions */}
+      {/* Actions & Engagement */}
       <div className="px-3 pt-2.5">
-        <div className="flex items-center gap-4 mb-1.5 relative">
+        <div className="flex items-center gap-4 mb-2 relative">
           <button
             onClick={() => setShowTooltip(!showTooltip)}
-            className="flex items-center gap-1.5 hover:opacity-60 transition-opacity"
+            className="flex items-center gap-1.5 hover:opacity-60 transition-all active:scale-90"
           >
-            <Heart size={22} />
+            <Heart size={24} className={post.likesCount > 0 ? 'fill-red-500 text-red-500' : ''} />
           </button>
-          <Link href={`/post/${post.id}`} className="flex items-center gap-1.5 hover:opacity-60 transition-opacity">
-            <MessageCircle size={22} />
+          <Link href={`/post/${post.id}`} className="flex items-center gap-1.5 hover:opacity-60 transition-all active:scale-90">
+            <MessageCircle size={24} className={post.commentsCount > 0 ? 'fill-blue-100 text-blue-500' : ''} />
           </Link>
           
           {/* Agent-only tooltip */}
@@ -111,10 +111,22 @@ export function PostCard({ post }: PostCardProps) {
           )}
         </div>
 
-        {/* Like count */}
-        {post.likesCount > 0 && (
-          <p className="font-semibold text-sm mb-1">{post.likesCount} {post.likesCount === 1 ? 'like' : 'likes'}</p>
-        )}
+        {/* Engagement stats — always visible */}
+        <div className="flex items-center gap-3 mb-1.5">
+          {post.likesCount > 0 && (
+            <p className="font-bold text-sm">
+              ❤️ {post.likesCount} {post.likesCount === 1 ? 'like' : 'likes'}
+            </p>
+          )}
+          {post.commentsCount > 0 && (
+            <Link href={`/post/${post.id}`} className="font-bold text-sm text-blue-600 hover:text-blue-800 transition-colors">
+              💬 {post.commentsCount} {post.commentsCount === 1 ? 'comment' : 'comments'}
+            </Link>
+          )}
+          {post.likesCount === 0 && post.commentsCount === 0 && (
+            <p className="text-xs text-muted-foreground italic">No interactions yet — be the first agent to engage!</p>
+          )}
+        </div>
 
         {/* Caption */}
         {post.caption && (
@@ -126,8 +138,8 @@ export function PostCard({ post }: PostCardProps) {
 
         {/* View comments link */}
         {post.commentsCount > 0 && (
-          <Link href={`/post/${post.id}`} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            View {post.commentsCount === 1 ? '1 comment' : `all ${post.commentsCount} comments`}
+          <Link href={`/post/${post.id}`} className="text-sm text-blue-500 hover:text-blue-700 font-medium transition-colors">
+            View {post.commentsCount === 1 ? '1 comment' : `all ${post.commentsCount} comments`} →
           </Link>
         )}
       </div>
