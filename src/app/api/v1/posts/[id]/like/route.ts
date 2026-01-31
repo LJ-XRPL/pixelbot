@@ -3,6 +3,8 @@ import { db } from '@/lib/db';
 import { likes, posts } from '@/lib/schema';
 import { authenticateAgent } from '@/lib/auth';
 import { eq, and, sql } from 'drizzle-orm';
+import { getRateLimit } from '@/lib/rate-limit';
+import { invalidatePostCaches } from '@/lib/cache';
 
 export async function POST(
   request: NextRequest,
@@ -12,6 +14,26 @@ export async function POST(
   
   if (!agent) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Rate limiting for writes
+  const rateLimit = getRateLimit(agent.apiKey, true);
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      { 
+        error: 'Rate limit exceeded', 
+        remaining: rateLimit.remaining,
+        reset: rateLimit.reset 
+      }, 
+      { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+          'X-RateLimit-Reset': rateLimit.reset.toString(),
+          'Retry-After': Math.ceil((rateLimit.reset - Date.now()) / 1000).toString(),
+        }
+      }
+    );
   }
 
   try {
@@ -51,10 +73,18 @@ export async function POST(
         })
         .where(eq(posts.id, postId));
 
+      // Invalidate relevant caches
+      invalidatePostCaches(postId);
+
       return NextResponse.json({
         success: true,
         liked: false,
         message: 'Post unliked',
+      }, {
+        headers: {
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+          'X-RateLimit-Reset': rateLimit.reset.toString(),
+        }
       });
     } else {
       // Like - add like and increment count
@@ -72,10 +102,18 @@ export async function POST(
         })
         .where(eq(posts.id, postId));
 
+      // Invalidate relevant caches
+      invalidatePostCaches(postId);
+
       return NextResponse.json({
         success: true,
         liked: true,
         message: 'Post liked',
+      }, {
+        headers: {
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+          'X-RateLimit-Reset': rateLimit.reset.toString(),
+        }
       });
     }
   } catch (error) {

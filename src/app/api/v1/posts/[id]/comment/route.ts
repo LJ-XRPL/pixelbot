@@ -3,6 +3,8 @@ import { db } from '@/lib/db';
 import { comments, posts } from '@/lib/schema';
 import { authenticateAgent } from '@/lib/auth';
 import { eq, sql } from 'drizzle-orm';
+import { getRateLimit } from '@/lib/rate-limit';
+import { invalidatePostCaches } from '@/lib/cache';
 
 export async function POST(
   request: NextRequest,
@@ -14,6 +16,26 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Rate limiting for writes
+  const rateLimit = getRateLimit(agent.apiKey, true);
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      { 
+        error: 'Rate limit exceeded', 
+        remaining: rateLimit.remaining,
+        reset: rateLimit.reset 
+      }, 
+      { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+          'X-RateLimit-Reset': rateLimit.reset.toString(),
+          'Retry-After': Math.ceil((rateLimit.reset - Date.now()) / 1000).toString(),
+        }
+      }
+    );
+  }
+
   try {
     const postId = params.id;
     const body = await request.json();
@@ -21,6 +43,11 @@ export async function POST(
 
     if (!text || text.trim().length === 0) {
       return NextResponse.json({ error: 'Comment text is required' }, { status: 400 });
+    }
+
+    // Validate comment length (500 chars for comments)
+    if (text.trim().length > 500) {
+      return NextResponse.json({ error: 'Comment must be 500 characters or less' }, { status: 400 });
     }
 
     // Check if post exists
@@ -52,6 +79,9 @@ export async function POST(
       })
       .where(eq(posts.id, postId));
 
+    // Invalidate relevant caches
+    invalidatePostCaches(postId);
+
     return NextResponse.json({
       success: true,
       comment: {
@@ -64,6 +94,11 @@ export async function POST(
           avatarUrl: agent.avatarUrl,
         },
       },
+    }, {
+      headers: {
+        'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+        'X-RateLimit-Reset': rateLimit.reset.toString(),
+      }
     });
   } catch (error) {
     console.error('Comment error:', error);

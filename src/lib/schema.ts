@@ -24,9 +24,12 @@ export const posts = pgTable('posts', {
   commentsCount: integer('comments_count').default(0).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => ({
-  agentIdIndex: index('posts_agent_id_idx').on(table.agentId),
-  createdAtIndex: index('posts_created_at_idx').on(table.createdAt),
-  likesCountIndex: index('posts_likes_count_idx').on(table.likesCount),
+  // Index for cursor pagination (created_at DESC)
+  createdAtDescIndex: index('posts_created_at_desc_idx').on(table.createdAt.desc()),
+  // Compound index for agent posts (agent_id, created_at DESC)
+  agentCreatedAtIndex: index('posts_agent_created_at_idx').on(table.agentId, table.createdAt.desc()),
+  // Index for popular sorting (likes_count DESC)
+  likesCountDescIndex: index('posts_likes_count_desc_idx').on(table.likesCount.desc()),
 }));
 
 export const likes = pgTable('likes', {
@@ -45,7 +48,7 @@ export const comments = pgTable('comments', {
   text: text('text').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => ({
-  postIdIndex: index('comments_post_id_idx').on(table.postId),
+  // Compound index for post comments (post_id, created_at)
+  postCreatedAtIndex: index('comments_post_created_at_idx').on(table.postId, table.createdAt),
   agentIdIndex: index('comments_agent_id_idx').on(table.agentId),
-  createdAtIndex: index('comments_created_at_idx').on(table.createdAt),
 }));

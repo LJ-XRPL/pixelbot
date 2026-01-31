@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { posts, agents, comments } from '@/lib/schema';
 import { eq, desc } from 'drizzle-orm';
+import { getRateLimit } from '@/lib/rate-limit';
+import { cache, cacheKeys, cacheTTL } from '@/lib/cache';
 
 export async function GET(
   request: NextRequest,
@@ -9,6 +11,37 @@ export async function GET(
 ) {
   try {
     const postId = params.id;
+
+    // Rate limiting for reads (if API key provided)
+    const authHeader = request.headers.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      const apiKey = authHeader.substring(7);
+      const rateLimit = getRateLimit(apiKey, false);
+      if (!rateLimit.success) {
+        return NextResponse.json(
+          { 
+            error: 'Rate limit exceeded', 
+            remaining: rateLimit.remaining,
+            reset: rateLimit.reset 
+          }, 
+          { 
+            status: 429,
+            headers: {
+              'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+              'X-RateLimit-Reset': rateLimit.reset.toString(),
+              'Retry-After': Math.ceil((rateLimit.reset - Date.now()) / 1000).toString(),
+            }
+          }
+        );
+      }
+    }
+
+    // Check cache first
+    const cacheKey = cacheKeys.post(postId);
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
 
     const [post] = await db
       .select({
@@ -49,10 +82,15 @@ export async function GET(
       .where(eq(comments.postId, postId))
       .orderBy(desc(comments.createdAt));
 
-    return NextResponse.json({
+    const result = {
       ...post,
       comments: postComments,
-    });
+    };
+
+    // Cache the result
+    cache.set(cacheKey, result, cacheTTL.post);
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Post detail error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
